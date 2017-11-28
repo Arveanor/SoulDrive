@@ -13,4 +13,8 @@ class SOULDRIVE2_API ASoulDrive2GameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
 
+public:
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
+	void GenerateLevel(const TArray<FName> &SubLevels, FName PersistentLevel, int TileSize);
+
 };
