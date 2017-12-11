@@ -10,3 +10,8 @@ SDConstants::SDConstants()
 SDConstants::~SDConstants()
 {
 }
+
+const FName SDConstants::DEBUG_ACTION_COMMAND = FName("DebugAction");
+
+//spell fnames
+const FName SDConstants::DEVELOPER_ANGST = FName("DeveloperAngstSpell");
