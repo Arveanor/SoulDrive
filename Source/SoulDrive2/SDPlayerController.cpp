@@ -83,8 +83,7 @@ void ASDPlayerController::MoveToCursor()
 
 	if (Hit.bBlockingHit)
 	{
-		UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
-		NavSys->SimpleMoveToLocation(this, Hit.ImpactPoint);
+		RequestMoveToLocation(this, Hit.ImpactPoint);
 	}
 }
 
@@ -143,6 +142,17 @@ void ASDPlayerController::OnLaunchPlayerMenu()
 void ASDPlayerController::OnClosePlayerMenu()
 {
 	SetMenuCanBeOpened(true);
+}
+
+void ASDPlayerController::RequestMoveToLocation_Implementation(AController *TargetController, const FVector &Goal)
+{
+	UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
+	NavSys->SimpleMoveToLocation(TargetController, Goal);
+}
+
+bool ASDPlayerController::RequestMoveToLocation_Validate(AController * TargetController, const FVector & Goal)
+{
+	return true;
 }
 
 void ASDPlayerController::SetMenuCanBeOpened(bool NewValue)

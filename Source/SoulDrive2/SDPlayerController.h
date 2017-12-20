@@ -42,6 +42,11 @@ public:
 
 	void OnClosePlayerMenu();
 
+	UFUNCTION(Reliable, Server, WithValidation)
+	void RequestMoveToLocation(AController *TargetController, const FVector &Goal);
+	void RequestMoveToLocation_Implementation(AController *TargetController, const FVector &Goal);
+	bool RequestMoveToLocation_Validate(AController *TargetController, const FVector &Goal);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	uint8 OverwritableAction;
 
