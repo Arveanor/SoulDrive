@@ -33,3 +33,7 @@ void ASDBasePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 }
 
+void ASDBasePawn::CastSpell(FName SpellName)
+{
+
+}

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "SDBasePawn.h"
+#include "SDBaseSpell.h"
 #include "SDPlayerPawn.generated.h"
 
 /**
@@ -16,11 +17,13 @@ class SOULDRIVE2_API ASDPlayerPawn : public ASDBasePawn
 private:
 	/** Top down camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UCameraComponent* PlayerCameraComponent;
+	class UCameraComponent* PlayerCameraComponent;
 
 	/** Camera boom positioning the camera above the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* MainCameraBoom;
+	class USpringArmComponent* MainCameraBoom;
+
+	void BeginPlay() override;
 
 public:
 
@@ -31,5 +34,10 @@ public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetMainCameraBoom() const { return MainCameraBoom; }
 	
-	
+	UFUNCTION(Reliable, Server, WithValidation)
+	void SetPlayerWalkingSpeed();
+	void SetPlayerWalkingSpeed_Implementation();
+	bool SetPlayerWalkingSpeed_Validate();
+
+
 };
