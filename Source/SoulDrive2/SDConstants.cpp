@@ -12,6 +12,9 @@ SDConstants::~SDConstants()
 }
 
 const FName SDConstants::DEBUG_ACTION_COMMAND = FName("DebugAction");
+const bool SDConstants::CheatMode = true;
 
-//spell fnames
+const TSet<FName> SDConstants::SpellNames { FName("DeveloperAngstSpell"), FName("CheatSpell") };
 const FName SDConstants::DEVELOPER_ANGST = FName("DeveloperAngstSpell");
+const FName SDConstants::CHEAT_SPELL = FName("CheatSpell");
+const FName SDConstants::NO_SPELL = FName("SpellNone");

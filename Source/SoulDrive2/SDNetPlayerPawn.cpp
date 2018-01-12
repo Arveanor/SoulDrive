@@ -6,3 +6,11 @@
 
 
 
+void ASDNetPlayerPawn::TravelToLevel(FName LevelToLoad)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Attempting to do ServerTravel"));
+	if (HasAuthority())
+	{
+		GetWorld()->ServerTravel(LevelToLoad.ToString());
+	}
+}

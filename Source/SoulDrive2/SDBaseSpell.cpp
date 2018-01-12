@@ -26,3 +26,7 @@ void ASDBaseSpell::Tick(float DeltaTime)
 
 }
 
+void ASDBaseSpell::CastSpell(FVector target)
+{
+	UE_LOG(LogTemp, Warning, TEXT("SpellSlot0 being cast in base class"));
+}

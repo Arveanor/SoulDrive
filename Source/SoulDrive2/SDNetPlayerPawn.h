@@ -13,7 +13,9 @@ class SOULDRIVE2_API ASDNetPlayerPawn : public ASDBasePawn
 {
 	GENERATED_BODY()
 	
-	
+public:
+	UFUNCTION(BlueprintCallable, Category = "Levels")
+	void TravelToLevel(FName LevelToLoad);
 	
 	
 };
