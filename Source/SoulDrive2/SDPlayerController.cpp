@@ -20,6 +20,10 @@ void ASDPlayerController::BeginPlay()
 	if (wPlayerGameMenu)
 	{
 		PlayerGameMenu = CreateWidget<UUserWidget>(this, wPlayerGameMenu);
+		if (PlayerGameMenu != nullptr)
+		{
+			KeyRebindInput.SetWidgetToFocus(PlayerGameMenu->TakeWidget());
+		}
 	}
 }
 
@@ -126,16 +130,19 @@ void ASDPlayerController::OverrideHotkey(const FKey Key)
 
 void ASDPlayerController::OnLaunchPlayerMenu()
 {
-	if (!PlayerGameMenu->IsInViewport() && MenuCanBeOpened)
+	if (PlayerGameMenu != nullptr)
 	{
-		SetMenuCanBeOpened(false);
-		PlayerGameMenu->AddToViewport();
-		SetInputMode(KeyRebindInput);
-	}
-	else
-	{
-		PlayerGameMenu->RemoveFromViewport();
-		SetInputMode(StandardInput);
+		if (!PlayerGameMenu->IsInViewport() && MenuCanBeOpened)
+		{
+			SetMenuCanBeOpened(false);
+			PlayerGameMenu->AddToViewport();
+			SetInputMode(KeyRebindInput);
+		}
+		else
+		{
+			PlayerGameMenu->RemoveFromViewport();
+			SetInputMode(StandardInput);
+		}
 	}
 }
 
