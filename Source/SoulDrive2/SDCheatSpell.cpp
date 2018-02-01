@@ -13,7 +13,7 @@ void ASDCheatSpell::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("CheatProjectileMesh being defaulted"));
 		CheatProjectileMesh = "StaticMesh'/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere'";
 	}
-	ProjectileVelocity = 250.0f;
+	ProjectileVelocity = 450.0f;
 }
 
 

@@ -8,8 +8,6 @@
 ASDNetPlayerProxy::ASDNetPlayerProxy()
 {
 	bReplicates = true;
-
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Create a camera boom...
@@ -25,6 +23,8 @@ ASDNetPlayerProxy::ASDNetPlayerProxy()
 	PlayerCameraComponent->SetupAttachment(MainCameraBoom, USpringArmComponent::SocketName);
 	PlayerCameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	this->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASDNetPlayerProxy::OnOverlapBegin);
+	
 }
 
 // Called when the game starts or when spawned
@@ -52,6 +52,15 @@ void ASDNetPlayerProxy::BeginPlay()
 			}
 		}
 	}
+
+	if (SDConstants::CheatMode)
+	{
+		FActorSpawnParameters ItemSpawnInfo;
+		ASDBaseEquipment *DevItem;
+		DevItem = GetWorld()->SpawnActor<ASDBaseEquipment>(GetActorLocation(), FRotator(0.f, 0.f, 0.f), ItemSpawnInfo);
+		DevItem->ItemName = FName(TEXT("Universal key"));
+		CarriedItems.Add(DevItem);
+	}
 }
 
 // Called every frame
@@ -75,6 +84,11 @@ void ASDNetPlayerProxy::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 }
 
+void ASDNetPlayerProxy::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
+{
+	UE_LOG(LogTemp, Warning, TEXT("proxy pawn overlap event!"));
+}
+
 ASDNetPlayerController * ASDNetPlayerProxy::GetServerController()
 {
 	return ServerController;
@@ -88,4 +102,9 @@ void ASDNetPlayerProxy::SetServerController_Implementation(ASDNetPlayerControlle
 bool ASDNetPlayerProxy::SetServerController_Validate(ASDNetPlayerController *NetControllerS)
 {
 	return true;
+}
+
+void ASDNetPlayerProxy::PickupItem(const ASDBaseEquipment &AddedItem)
+{
+
 }
