@@ -6,6 +6,8 @@
 #include "Class.h"
 #include "SDNetPlayerPawn.h"
 #include "SDNetPlayerController.h"
+#include "SDBaseEquipment.h"
+#include "SDConstants.h"
 #include "SDNetPlayerProxy.generated.h"
 
 UCLASS()
@@ -40,11 +42,15 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
 	TSubclassOf<ASDNetPlayerPawn> NetCharacterClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
 	TSubclassOf<ASDNetPlayerController> NetControllerClass;
+
+	TArray<ASDBaseEquipment *> CarriedItems;
 
 	ASDNetPlayerController *GetServerController();
 
@@ -52,4 +58,7 @@ public:
 	void SetServerController(ASDNetPlayerController *NetControllerS);
 	void SetServerController_Implementation(ASDNetPlayerController *NetControllerS);
 	bool SetServerController_Validate(ASDNetPlayerController *NetControllerS);
+	void PickupItem(const ASDBaseEquipment &AddedItem);
+
+
 };

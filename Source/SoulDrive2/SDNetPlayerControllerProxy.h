@@ -7,9 +7,11 @@
 #include "Blueprint/UserWidget.h"
 #include "SDNetPlayerPawn.h"
 #include "SDNetPlayerProxy.h"
+#include "SDBaseEquipment.h"
 #include "SDConstants.h"
 #include "SDBaseSpell.h"
 #include "SDCheatSpell.h"
+#include "SDInventoryWidget.h"
 #include "SDNetPlayerControllerProxy.generated.h"
 
 /**
@@ -44,7 +46,13 @@ public:
 	void OnLaunchMpMenu();
 
 	UFUNCTION(BlueprintCallable, Category = "Widgets")
+	void OnLaunchInventoryMenu();
+
+	UFUNCTION(BlueprintCallable, Category = "Widgets")
 	void SetHotkeyMenuCanBeOpened(bool NewValue);
+
+	UFUNCTION(BlueprintCallable, Category = "Widgets")
+	void SetInventoryMenuCanBeOpened(bool NewValue);
 
 	UFUNCTION(BlueprintCallable, Category = "Widgets")
 	void SetMpMenuCanBeOpened(bool NewValue);
@@ -55,6 +63,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	FKey GetKeyForAction(FName ActionName);
 
+	void PickupItem(const ASDBaseEquipment &PickedUpItem);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerGameMenu;
 
@@ -62,10 +72,14 @@ public:
 	TSubclassOf<class UUserWidget> wMpMenu;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
+	TSubclassOf<class UUserWidget> wInventoryMenu;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	uint8 OverwritableAction;
 
 	void OnClosePlayerMenu();
 	void OnCloseMpMenu();
+	void OnCloseInventoryMenu();
 
 	void UseSpell(FName SpellName);
 private:
@@ -82,9 +96,11 @@ private:
 	FString SpellSlot0AssignedKey;
 	bool HotkeyMenuCanBeOpened;
 	bool MpMenuCanBeOpened;
+	bool InventoryMenuCanBeOpened;
 	bool bMoveToLocation;
 	UUserWidget* PlayerGameMenu;
 	UUserWidget* MpMenu;
+	UUserWidget* InventoryMenu;
 	FInputModeUIOnly KeyRebindInput;
 	FInputModeGameAndUI StandardInput;
 
