@@ -5,7 +5,7 @@
 #include "GameFramework/PlayerController.h"
 #include "SDNetPlayerController.h"
 #include "Blueprint/UserWidget.h"
-#include "SDNetPlayerPawn.h"
+//#include "SDNetPlayerPawn.h"
 #include "SDNetPlayerProxy.h"
 #include "SDBaseEquipment.h"
 #include "SDConstants.h"
@@ -30,6 +30,18 @@ protected:
 	void OnDebugActionReleased();
 	void OnSpellSlot0Pressed();
 	void OnSpellSlot0Released();
+
+	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
+	UUserWidget* PlayerGameMenu;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
+	UUserWidget* MpMenu;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
+	UUserWidget* InventoryMenu;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
+	UUserWidget* PlayerHud;
 	
 public:
 	ASDNetPlayerControllerProxy();
@@ -63,6 +75,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	FKey GetKeyForAction(FName ActionName);
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void OnItemPickup(ASDBaseEquipment *PickedUp);
+
 	void PickupItem(const ASDBaseEquipment &PickedUpItem);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
@@ -75,12 +90,16 @@ public:
 	TSubclassOf<class UUserWidget> wInventoryMenu;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
+	TSubclassOf<class UUserWidget> wPlayerHud;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	uint8 OverwritableAction;
 
 	void OnClosePlayerMenu();
 	void OnCloseMpMenu();
 	void OnCloseInventoryMenu();
-
+	
+	void AddEquipmentToMenu(ASDBaseEquipment *HeldEquipment);
 	void UseSpell(FName SpellName);
 private:
 
@@ -98,9 +117,7 @@ private:
 	bool MpMenuCanBeOpened;
 	bool InventoryMenuCanBeOpened;
 	bool bMoveToLocation;
-	UUserWidget* PlayerGameMenu;
-	UUserWidget* MpMenu;
-	UUserWidget* InventoryMenu;
+
 	FInputModeUIOnly KeyRebindInput;
 	FInputModeGameAndUI StandardInput;
 

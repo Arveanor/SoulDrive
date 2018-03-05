@@ -10,8 +10,10 @@
 #include "SDConstants.h"
 #include "SDNetPlayerProxy.generated.h"
 
+class ASDNetPlayerControllerProxy;
+
 UCLASS()
-class SOULDRIVE2_API ASDNetPlayerProxy : public ACharacter
+class SOULDRIVE2_API ASDNetPlayerProxy : public APawn
 {
 	GENERATED_BODY()
 
@@ -40,9 +42,13 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+//	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UFUNCTION(Category = "Items")
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION(Category = "Utility")
+	void OnFinalCall();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
 	TSubclassOf<ASDNetPlayerPawn> NetCharacterClass;
@@ -53,12 +59,12 @@ public:
 	TArray<ASDBaseEquipment *> CarriedItems;
 
 	ASDNetPlayerController *GetServerController();
+	ASDNetPlayerPawn *GetServerCharacter();
 
 	UFUNCTION(Reliable, Client, WithValidation)
 	void SetServerController(ASDNetPlayerController *NetControllerS);
 	void SetServerController_Implementation(ASDNetPlayerController *NetControllerS);
 	bool SetServerController_Validate(ASDNetPlayerController *NetControllerS);
 	void PickupItem(const ASDBaseEquipment &AddedItem);
-
 
 };

@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "SoulDrive2.h"
+#include "SDGameInstance.h"
 #include "SDNetPlayerProxy.h"
 
 
@@ -8,6 +9,8 @@
 ASDNetPlayerProxy::ASDNetPlayerProxy()
 {
 	bReplicates = true;
+	SetActorEnableCollision(false);
+//	GetCapsuleComponent()->SetCollisionProfileName(FName("NoCollision"));
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Create a camera boom...
@@ -23,7 +26,9 @@ ASDNetPlayerProxy::ASDNetPlayerProxy()
 	PlayerCameraComponent->SetupAttachment(MainCameraBoom, USpringArmComponent::SocketName);
 	PlayerCameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	this->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASDNetPlayerProxy::OnOverlapBegin);
+//	this->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASDNetPlayerProxy::OnOverlapBegin);
+// 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
+// 	GameInstance->OnTestDelegate.AddDynamic(this, &ASDNetPlayerProxy::OnFinalCall);
 	
 }
 
@@ -42,6 +47,7 @@ void ASDNetPlayerProxy::BeginPlay()
 			ServerController = GetWorld()->SpawnActor<ASDNetPlayerController>(NetControllerClass, SpawnParams);
 			ServerController->Possess(ServerCharacter);
 			SetServerController(ServerController);
+			ServerCharacter->SetProxyController(dynamic_cast<APlayerController *>(this->GetController()));
 			if (ServerController != nullptr)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Successfully created server controller!"));
@@ -78,20 +84,29 @@ void ASDNetPlayerProxy::Tick(float DeltaTime)
 }
 
 // Called to bind functionality to input
-void ASDNetPlayerProxy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-}
+// void ASDNetPlayerProxy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+// {
+// 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+// 
+// }
 
 void ASDNetPlayerProxy::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("proxy pawn overlap event!"));
 }
 
+void ASDNetPlayerProxy::OnFinalCall()
+{
+}
+
 ASDNetPlayerController * ASDNetPlayerProxy::GetServerController()
 {
 	return ServerController;
+}
+
+ASDNetPlayerPawn * ASDNetPlayerProxy::GetServerCharacter()
+{
+	return ServerCharacter;
 }
 
 void ASDNetPlayerProxy::SetServerController_Implementation(ASDNetPlayerController *NetControllerS)

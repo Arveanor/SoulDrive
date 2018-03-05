@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Blueprint/UserWidget.h"
+#include "SDBaseEquipment.h"
 #include "SDInventoryWidget.generated.h"
 
 /**
@@ -16,7 +17,7 @@ class SOULDRIVE2_API USDInventoryWidget : public UUserWidget
 public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Widgets")
-	void AddButtonToPanel(FName ItemName);
+	void AddButtonToPanel(ASDBaseEquipment *ItemRef);
 	
 	
 };

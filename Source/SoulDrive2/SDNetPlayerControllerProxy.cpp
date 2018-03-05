@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "SoulDrive2.h"
+#include "SDGameInstance.h"
 #include "SDNetPlayerControllerProxy.h"
 
 
@@ -50,11 +51,17 @@ void ASDNetPlayerControllerProxy::SetupInputComponent()
 	InputComponent->BindAction("LaunchMpMenu", IE_Released, this, &ASDNetPlayerControllerProxy::OnCloseMpMenu);
 
 	InputComponent->BindAction("LaunchInventoryMenu", IE_Pressed, this, &ASDNetPlayerControllerProxy::OnLaunchInventoryMenu);
-	InputComponent->BindAction("LaunchInventoryMenu", IE_Released, this, &ASDNetPlayerControllerProxy::OnLaunchInventoryMenu);
+	InputComponent->BindAction("LaunchInventoryMenu", IE_Released, this, &ASDNetPlayerControllerProxy::OnCloseInventoryMenu);
 }
 
 void ASDNetPlayerControllerProxy::BeginPlay()
 {
+	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
+	if (GameInstance != nullptr)
+	{
+		GameInstance->OnItemPickup.AddDynamic(this, &ASDNetPlayerControllerProxy::OnItemPickup);
+	}
+
 	if (HasAuthority())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Client side Net Player Controller Proxy BeginPlay"));
@@ -91,6 +98,15 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 		if (wInventoryMenu)
 		{
 			InventoryMenu = CreateWidget<UUserWidget>(this, wInventoryMenu);
+		}
+
+		if (wPlayerHud)
+		{
+			PlayerHud = CreateWidget<UUserWidget>(this, wPlayerHud);
+			if (PlayerHud)
+			{
+				PlayerHud->AddToViewport();
+			}
 		}
 	}
 
@@ -236,24 +252,13 @@ void ASDNetPlayerControllerProxy::OnLaunchInventoryMenu()
 		{
 			SetInventoryMenuCanBeOpened(false);
 			InventoryMenu->AddToViewport();
-			USDInventoryWidget *CastWidget = dynamic_cast<USDInventoryWidget *>(InventoryMenu);
-			ASDNetPlayerProxy *ControlledPawn = dynamic_cast<ASDNetPlayerProxy *>(GetPawn());
-			if (ControlledPawn != nullptr && CastWidget != nullptr)
-			{
-				TArray<ASDBaseEquipment *> *PawnsItems = &(ControlledPawn->CarriedItems);
-				for (int i = 0; i < PawnsItems->Num(); i++)
-				{
-					UE_LOG(LogTemp, Warning, TEXT("Adding item to panel"));
-					CastWidget->AddButtonToPanel((*PawnsItems)[i]->ItemName);
-				}
-			}
-//			SetInputMode(KeyRebindInput);
+		}
+		else
+		{
+			InventoryMenu->RemoveFromViewport();
 		}
 	}
-	else
-	{
-		InventoryMenu->RemoveFromViewport();
-	}
+
 }
 
 void ASDNetPlayerControllerProxy::SetHotkeyMenuCanBeOpened(bool NewValue)
@@ -326,6 +331,11 @@ FKey ASDNetPlayerControllerProxy::GetKeyForAction(FName ActionName)
 	}
 }
 
+void ASDNetPlayerControllerProxy::OnItemPickup(ASDBaseEquipment * PickedUp)
+{
+	this->AddEquipmentToMenu(PickedUp);
+}
+
 void ASDNetPlayerControllerProxy::PickupItem(const ASDBaseEquipment &PickedUpItem)
 {
 	
@@ -344,6 +354,16 @@ void ASDNetPlayerControllerProxy::OnCloseMpMenu()
 void ASDNetPlayerControllerProxy::OnCloseInventoryMenu()
 {
 	InventoryMenuCanBeOpened = true;
+}
+
+void ASDNetPlayerControllerProxy::AddEquipmentToMenu(ASDBaseEquipment *HeldEquipment)
+{
+	USDInventoryWidget *CastWidget = dynamic_cast<USDInventoryWidget *>(InventoryMenu);
+	if (CastWidget != nullptr)
+	{
+		CastWidget->AddButtonToPanel(HeldEquipment);
+		//CastWidget->SetEquipment(HeldEquipment);
+	}
 }
 
 void ASDNetPlayerControllerProxy::UseSpell(FName SpellName)

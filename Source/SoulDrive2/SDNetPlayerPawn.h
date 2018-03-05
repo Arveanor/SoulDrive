@@ -3,6 +3,8 @@
 #pragma once
 
 #include "SDBasePawn.h"
+#include "SDBaseEquipment.h"
+//#include "SDNetPlayerControllerProxy.h"
 #include "SDNetPlayerPawn.generated.h"
 
 /**
@@ -13,6 +15,9 @@ class SOULDRIVE2_API ASDNetPlayerPawn : public ASDBasePawn
 {
 	GENERATED_BODY()
 	
+protected:
+	virtual void BeginPlay() override;
+
 public:
 	ASDNetPlayerPawn();
 
@@ -20,6 +25,17 @@ public:
 	void TravelToLevel(FName LevelToLoad);
 	
 	void EquipItem(FString MeshName);
-	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void SetProxyController(APlayerController *ClientController);
 
+	UFUNCTION(Category = "Items")
+	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	
+	UFUNCTION(Category = "Debug")
+	void OnHitDetected(UPrimitiveComponent *OverlappedComp, AActor *OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& SweepResult);
+
+	TArray<ASDBaseEquipment *> *CarriedItems;
+	
+private:
+	APlayerController* ProxyController;
+	int PlayerId;
 };

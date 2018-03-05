@@ -23,6 +23,13 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(Category = "Items")
+	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION(BlueprintCallable, Category = "Items")
+	void SetActiveInWorld(bool active);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
 	FName ItemName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
@@ -30,6 +37,6 @@ public:
 	SDStatSheet ItemDetails;
 
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Player, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Player, meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* MeshComp;
 };
