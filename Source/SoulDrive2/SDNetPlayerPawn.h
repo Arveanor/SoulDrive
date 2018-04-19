@@ -23,8 +23,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Levels")
 	void TravelToLevel(FName LevelToLoad);
-	
-	void EquipItem(FString MeshName);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool DropItem(ASDBaseEquipment *Equipment);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void EquipItem(AActor *Item);
+
 	void SetProxyController(APlayerController *ClientController);
 
 	UFUNCTION(Category = "Items")
@@ -37,5 +42,4 @@ public:
 	
 private:
 	APlayerController* ProxyController;
-	int PlayerId;
 };

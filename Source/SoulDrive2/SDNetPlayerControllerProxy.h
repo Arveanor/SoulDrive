@@ -11,6 +11,7 @@
 #include "SDConstants.h"
 #include "SDBaseSpell.h"
 #include "SDCheatSpell.h"
+#include "SDSunBurstSpell.h"
 #include "SDInventoryWidget.h"
 #include "SDNetPlayerControllerProxy.generated.h"
 
@@ -30,6 +31,8 @@ protected:
 	void OnDebugActionReleased();
 	void OnSpellSlot0Pressed();
 	void OnSpellSlot0Released();
+	void OnSpellSlot1Pressed();
+	void OnSpellSlot1Released();
 
 	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
 	UUserWidget* PlayerGameMenu;
@@ -42,6 +45,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
 	UUserWidget* PlayerHud;
+
+	UFUNCTION(Category = "Networking")
+	void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 	
 public:
 	ASDNetPlayerControllerProxy();
@@ -78,6 +84,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void OnItemPickup(ASDBaseEquipment *PickedUp);
 
+	UFUNCTION(BlueprintCallable, Category = "Levels")
+	void SetControllerInputModeGame();
+
 	void PickupItem(const ASDBaseEquipment &PickedUpItem);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
@@ -100,7 +109,6 @@ public:
 	void OnCloseInventoryMenu();
 	
 	void AddEquipmentToMenu(ASDBaseEquipment *HeldEquipment);
-	void UseSpell(FName SpellName);
 private:
 
 	void OnMovementKeyPressed();

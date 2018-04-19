@@ -18,12 +18,14 @@ public:
 	void Init(APawn* OwnedBy);
 
 protected:
-	virtual void CastSpell(FVector target) override;
+	
 	virtual void BeginPlay() override;
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Player, meta = (AllowPrivateAccess = "true"))
 	FString CheatProjectileMesh;
+
+	virtual void CastSpell(FVector target) override;
 
 	float ProjectileVelocity;
 };

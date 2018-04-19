@@ -13,6 +13,9 @@ ASDNetPlayerProxy::ASDNetPlayerProxy()
 //	GetCapsuleComponent()->SetCollisionProfileName(FName("NoCollision"));
 	PrimaryActorTick.bCanEverTick = true;
 
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	RootComponent = SceneRoot;
+
 	// Create a camera boom...
 	MainCameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	MainCameraBoom->SetupAttachment(RootComponent);
@@ -42,19 +45,22 @@ void ASDNetPlayerProxy::BeginPlay()
 		{
 			FActorSpawnParameters SpawnParams;
 			FVector SpawnLocation = GetActorLocation();
-
+			UE_LOG(LogTemp, Warning, TEXT("Attempting to spawn Server Character at %s"), *SpawnLocation.ToString());
 			ServerCharacter = GetWorld()->SpawnActor<ASDNetPlayerPawn>(NetCharacterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
-			ServerController = GetWorld()->SpawnActor<ASDNetPlayerController>(NetControllerClass, SpawnParams);
-			ServerController->Possess(ServerCharacter);
-			SetServerController(ServerController);
-			ServerCharacter->SetProxyController(dynamic_cast<APlayerController *>(this->GetController()));
-			if (ServerController != nullptr)
+			if (ServerCharacter != nullptr)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Successfully created server controller!"));
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Could not create server controller!"));
+				ServerController = GetWorld()->SpawnActor<ASDNetPlayerController>(NetControllerClass, SpawnParams);
+				ServerController->Possess(ServerCharacter);
+				SetServerController(ServerController);
+				ServerCharacter->SetProxyController(dynamic_cast<APlayerController *>(this->GetController()));
+				if (ServerController != nullptr)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Successfully created server controller!"));
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Could not create server controller!"));
+				}
 			}
 		}
 	}
@@ -65,7 +71,6 @@ void ASDNetPlayerProxy::BeginPlay()
 		ASDBaseEquipment *DevItem;
 		DevItem = GetWorld()->SpawnActor<ASDBaseEquipment>(GetActorLocation(), FRotator(0.f, 0.f, 0.f), ItemSpawnInfo);
 		DevItem->ItemName = FName(TEXT("Universal key"));
-		CarriedItems.Add(DevItem);
 	}
 }
 
@@ -99,6 +104,23 @@ void ASDNetPlayerProxy::OnFinalCall()
 {
 }
 
+bool ASDNetPlayerProxy::DropItem(ASDBaseEquipment * DroppedItem)
+{
+	return ServerCharacter->DropItem(DroppedItem);
+}
+
+float ASDNetPlayerProxy::GetDisplayHealth()
+{
+	if (ServerCharacter != nullptr)
+	{
+		return ServerCharacter->GetHpRatio();
+	}
+	else
+	{
+		return 0.0f;
+	}
+}
+
 ASDNetPlayerController * ASDNetPlayerProxy::GetServerController()
 {
 	return ServerController;
@@ -117,9 +139,4 @@ void ASDNetPlayerProxy::SetServerController_Implementation(ASDNetPlayerControlle
 bool ASDNetPlayerProxy::SetServerController_Validate(ASDNetPlayerController *NetControllerS)
 {
 	return true;
-}
-
-void ASDNetPlayerProxy::PickupItem(const ASDBaseEquipment &AddedItem)
-{
-
 }

@@ -3,21 +3,28 @@
 #pragma once
 
 #include "GameFramework/Pawn.h"
+#include "SDTeamIdentity.h"
 #include "SDBasePawn.generated.h"
 
 UCLASS()
-class SOULDRIVE2_API ASDBasePawn : public ACharacter
+class SOULDRIVE2_API ASDBasePawn : public ACharacter, public ISDTeamIdentity
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this pawn's properties
 	ASDBasePawn();
+	void SetPlayerID(int id);
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	TArray<FName> SpellsList;
+
+	int PlayerId;
+
+	int MaxHp;
+	float CurrentHp;
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -26,5 +33,16 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Spells")
-	virtual void CastSpell(FName SpellName);
+	virtual void CastSpell(FName SpellName, FVector AimedAt);
+
+	UFUNCTION(BlueprintCallable, Category = "Player")
+	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Team")
+	int TeamId;
+
+	int GetTeamId();
+	void SetTimeId(int InTeamId);
+
+	float GetHpRatio();
 };

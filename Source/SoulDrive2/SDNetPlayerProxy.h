@@ -34,6 +34,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* MainCameraBoom;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Player, meta = (AllowPrivateAccess = "true"))
+	class USceneComponent *SceneRoot;
+
+
 	ASDNetPlayerPawn *ServerCharacter;
 	ASDNetPlayerController *ServerController;
 
@@ -44,11 +48,17 @@ public:
 	// Called to bind functionality to input
 //	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UFUNCTION(Category = "Items")
+	UFUNCTION(Category = "Inventory")
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION(Category = "Utility")
 	void OnFinalCall();
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool DropItem(ASDBaseEquipment *DroppedItem);
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerStats")
+	float GetDisplayHealth();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
 	TSubclassOf<ASDNetPlayerPawn> NetCharacterClass;
@@ -56,15 +66,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
 	TSubclassOf<ASDNetPlayerController> NetControllerClass;
 
-	TArray<ASDBaseEquipment *> CarriedItems;
-
 	ASDNetPlayerController *GetServerController();
+
+	UFUNCTION(BlueprintCallable, Category = "Player")
 	ASDNetPlayerPawn *GetServerCharacter();
 
 	UFUNCTION(Reliable, Client, WithValidation)
 	void SetServerController(ASDNetPlayerController *NetControllerS);
 	void SetServerController_Implementation(ASDNetPlayerController *NetControllerS);
 	bool SetServerController_Validate(ASDNetPlayerController *NetControllerS);
-	void PickupItem(const ASDBaseEquipment &AddedItem);
 
 };

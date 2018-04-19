@@ -23,7 +23,9 @@ class SOULDRIVE2_API ASDBaseAIController : public AAIController
 	UPROPERTY(transient)
 	UBehaviorTreeComponent *BehaviorComp;
 
- 	virtual void Possess(class APawn *InPawn);
+public:
+
+ 	virtual void Possess(class APawn *InPawn) override;
  	void setEnemy(class APawn *InPawn);
  
 	UFUNCTION(BlueprintCallable, Category = Behavior)

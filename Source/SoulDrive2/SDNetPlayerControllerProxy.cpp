@@ -5,6 +5,11 @@
 #include "SDNetPlayerControllerProxy.h"
 
 
+void ASDNetPlayerControllerProxy::PreClientTravel(const FString & PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
+{
+	SetInputMode(KeyRebindInput);
+}
+
 ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
 {
 	bMoveToLocation = false;
@@ -14,6 +19,7 @@ ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
 	MpMenuCanBeOpened = true;
 	OverwritableAction = SDConstants::HotKeyOverrides::NO_ACTION_WRITABLE;
 	StandardInput.SetHideCursorDuringCapture(false);
+
 }
 
 void ASDNetPlayerControllerProxy::PlayerTick(float DeltaTime)
@@ -47,6 +53,9 @@ void ASDNetPlayerControllerProxy::SetupInputComponent()
 	InputComponent->BindAction("SpellSlot0", IE_Pressed, this, &ASDNetPlayerControllerProxy::OnSpellSlot0Pressed);
 	InputComponent->BindAction("SpellSlot0", IE_Released, this, &ASDNetPlayerControllerProxy::OnSpellSlot0Released);
 
+	InputComponent->BindAction("SpellSlot1", IE_Pressed, this, &ASDNetPlayerControllerProxy::OnSpellSlot1Pressed);
+	InputComponent->BindAction("SpellSlot1", IE_Released, this, &ASDNetPlayerControllerProxy::OnSpellSlot1Released);
+
 	InputComponent->BindAction("LaunchMpMenu", IE_Pressed, this, &ASDNetPlayerControllerProxy::OnLaunchMpMenu);
 	InputComponent->BindAction("LaunchMpMenu", IE_Released, this, &ASDNetPlayerControllerProxy::OnCloseMpMenu);
 
@@ -62,14 +71,6 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 		GameInstance->OnItemPickup.AddDynamic(this, &ASDNetPlayerControllerProxy::OnItemPickup);
 	}
 
-	if (HasAuthority())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Client side Net Player Controller Proxy BeginPlay"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Server side Net Player Controller Proxy BeginPlay"));
-	}
 	PlayerProxy = (ASDNetPlayerProxy *)GetPawn();
 	if (PlayerProxy != nullptr)
 	{
@@ -113,7 +114,8 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 	if (SDConstants::CheatMode)
 	{
 		FActorSpawnParameters SpawnInfo;
-		SpellSlot0 = GetWorld()->SpawnActor<ASDCheatSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
+		SpawnInfo.Instigator = GetPawn();
+		SpellSlot0 = GetWorld()->SpawnActor<ASDSunBurstSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
 		ASDCheatSpell* ChildRef = dynamic_cast<ASDCheatSpell*>(SpellSlot0);
 
 		if (ServerController == nullptr && PlayerProxy != nullptr)
@@ -146,8 +148,15 @@ void ASDNetPlayerControllerProxy::OnDebugActionReleased()
 
 void ASDNetPlayerControllerProxy::OnSpellSlot0Pressed()
 {
+	FVector TargetLocation(0.0f, 0.0f, 0.0f);
 	if (SpellSlot0 != nullptr)
 	{
+		FHitResult Hit;
+		GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+		if (Hit.bBlockingHit)
+		{
+			TargetLocation = Hit.Location;
+		}
 		ASDCheatSpell *AsCheatSpell = dynamic_cast<ASDCheatSpell *>(SpellSlot0);
 		if (ServerController == nullptr)
 		{
@@ -155,8 +164,8 @@ void ASDNetPlayerControllerProxy::OnSpellSlot0Pressed()
 		}
 		if (ServerController != nullptr)
 		{
-			AsCheatSpell->Init(ServerController->GetPawn());
-			SpellSlot0->CastSpell(FVector(0.0f, 0.0f, 0.0f));
+			if(AsCheatSpell != nullptr) AsCheatSpell->Init(ServerController->GetPawn());
+			SpellSlot0->CastSpell(TargetLocation);
 		}
 	}
 	else
@@ -166,6 +175,16 @@ void ASDNetPlayerControllerProxy::OnSpellSlot0Pressed()
 }
 
 void ASDNetPlayerControllerProxy::OnSpellSlot0Released()
+{
+
+}
+
+void ASDNetPlayerControllerProxy::OnSpellSlot1Pressed()
+{
+
+}
+
+void ASDNetPlayerControllerProxy::OnSpellSlot1Released()
 {
 
 }
@@ -203,8 +222,6 @@ void ASDNetPlayerControllerProxy::OnLaunchPlayerMenu()
 	{
 		if (!PlayerGameMenu->IsInViewport() && HotkeyMenuCanBeOpened)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("FUck you asshole"))
-
 			SetHotkeyMenuCanBeOpened(false);
 			GetPawn()->DisableInput(this);
 			PlayerGameMenu->AddToViewport();
@@ -248,14 +265,21 @@ void ASDNetPlayerControllerProxy::OnLaunchInventoryMenu()
 {
 	if (InventoryMenu != nullptr)
 	{
-		if (!InventoryMenu->IsInViewport() && InventoryMenuCanBeOpened)
+		if (!InventoryMenu->IsInViewport())
 		{
-			SetInventoryMenuCanBeOpened(false);
 			InventoryMenu->AddToViewport();
 		}
 		else
 		{
-			InventoryMenu->RemoveFromViewport();
+			if (!InventoryMenu->IsVisible() && InventoryMenuCanBeOpened)
+			{
+				SetInventoryMenuCanBeOpened(false);
+				InventoryMenu->SetVisibility(ESlateVisibility::Visible);
+			}
+			else
+			{
+				InventoryMenu->SetVisibility(ESlateVisibility::Hidden);
+			}
 		}
 	}
 
@@ -336,6 +360,11 @@ void ASDNetPlayerControllerProxy::OnItemPickup(ASDBaseEquipment * PickedUp)
 	this->AddEquipmentToMenu(PickedUp);
 }
 
+void ASDNetPlayerControllerProxy::SetControllerInputModeGame()
+{
+	SetInputMode(StandardInput);
+}
+
 void ASDNetPlayerControllerProxy::PickupItem(const ASDBaseEquipment &PickedUpItem)
 {
 	
@@ -363,19 +392,6 @@ void ASDNetPlayerControllerProxy::AddEquipmentToMenu(ASDBaseEquipment *HeldEquip
 	{
 		CastWidget->AddButtonToPanel(HeldEquipment);
 		//CastWidget->SetEquipment(HeldEquipment);
-	}
-}
-
-void ASDNetPlayerControllerProxy::UseSpell(FName SpellName)
-{
-	if (SDConstants::SpellNames.Contains(SpellName))
-	{
-
-	}
-
-	if (SpellName.IsEqual(SDConstants::CHEAT_SPELL))
-	{
-
 	}
 }
 

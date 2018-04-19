@@ -4,6 +4,7 @@
 
 #include "Engine/GameInstance.h"
 #include "SDBaseEquipment.h"
+#include "SDBasePawn.h"
 #include "SDGameInstance.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTestDelegate);
@@ -22,6 +23,8 @@ class SOULDRIVE2_API USDGameInstance : public UGameInstance
 public:
 	USDGameInstance();
 	void ActorLoaded();
+
+	void GetPlayerIDOnJoin(ASDBasePawn *Player);
 	
 	UPROPERTY(BlueprintAssignable, Category = "Test")
 	FTestDelegate OnTestDelegate;
@@ -37,8 +40,11 @@ public:
 	void OnlineSessionCreated();
 
 private:
+	FCriticalSection ServerCriticalSection;
+
 	int CriticalFunctionsCount;
 	int PlayersConnected;
 	bool IsOnlineSession;
 	TArray<TArray<ASDBaseEquipment *> *> PlayerInventoryArray;
+	int NextPlayerID;
 };

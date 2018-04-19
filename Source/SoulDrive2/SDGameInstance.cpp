@@ -18,6 +18,13 @@ void USDGameInstance::ActorLoaded()
 
 }
 
+void USDGameInstance::GetPlayerIDOnJoin(ASDBasePawn *Player)
+{
+	ServerCriticalSection.Lock();
+	Player->SetPlayerID(NextPlayerID++);
+	ServerCriticalSection.Unlock();
+}
+
 TArray<ASDBaseEquipment*> *USDGameInstance::GetPlayerInventory(int PlayerId)
 {
 	return PlayerInventoryArray[PlayerId];

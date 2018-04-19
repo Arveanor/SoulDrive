@@ -3,6 +3,7 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
+#include "SDBaseSpell.h"
 #include "SDBaseAoE.generated.h"
 
 UCLASS()
@@ -22,6 +23,28 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(Category = "Spells")
+	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Spells")
+	UParticleSystemComponent *ParticleComp;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Spells")
+	UCapsuleComponent *CapsuleComp;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Spells")
+	UDecalComponent *DecalComp;
+
+	void SetParentSpell(ASDBaseSpell *InParentSpell);
+
+private:
+	FTimerHandle TimerHandler;
 	
-	
+	UFUNCTION()
+	void OnPrimed();
+
+	UFUNCTION()
+	void OnFinished();
+
+	ASDBaseSpell *ParentSpell;
 };
