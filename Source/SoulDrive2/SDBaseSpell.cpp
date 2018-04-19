@@ -30,3 +30,18 @@ void ASDBaseSpell::CastSpell(FVector target)
 {
 	UE_LOG(LogTemp, Warning, TEXT("SpellSlot0 being cast in base class"));
 }
+
+void ASDBaseSpell::HandleTarget(AActor *Target, bool IsAlly)
+{
+	UE_LOG(LogTemp, Warning, TEXT("HandleTarget being cast in base class"));
+}
+
+void ASDBaseSpell::SetTeamId(int InTeamId)
+{
+	TeamId = InTeamId;
+}
+
+int ASDBaseSpell::GetTeamId()
+{
+	return TeamId;
+}

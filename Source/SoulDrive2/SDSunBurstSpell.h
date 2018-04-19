@@ -13,7 +13,9 @@ class SOULDRIVE2_API ASDSunBurstSpell : public ASDBaseSpell
 {
 	GENERATED_BODY()
 	
-	
-	
-	
+public:
+	virtual void CastSpell(FVector target);
+	virtual void BeginPlay() override;
+	virtual void HandleTarget(AActor *Target, bool IsAlly) override;
+
 };

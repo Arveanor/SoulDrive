@@ -11,6 +11,7 @@
 #include "SDConstants.h"
 #include "SDBaseSpell.h"
 #include "SDCheatSpell.h"
+#include "SDSunBurstSpell.h"
 #include "SDInventoryWidget.h"
 #include "SDNetPlayerControllerProxy.generated.h"
 
@@ -30,6 +31,8 @@ protected:
 	void OnDebugActionReleased();
 	void OnSpellSlot0Pressed();
 	void OnSpellSlot0Released();
+	void OnSpellSlot1Pressed();
+	void OnSpellSlot1Released();
 
 	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
 	UUserWidget* PlayerGameMenu;
@@ -100,7 +103,6 @@ public:
 	void OnCloseInventoryMenu();
 	
 	void AddEquipmentToMenu(ASDBaseEquipment *HeldEquipment);
-	void UseSpell(FName SpellName);
 private:
 
 	void OnMovementKeyPressed();

@@ -20,6 +20,9 @@ void ASDNetPlayerPawn::BeginPlay()
 			CarriedItems = GameInstance->GetPlayerInventory(0);
 		}
 	}
+	MaxHp = 100;
+	CurrentHp = (float)MaxHp;
+	TeamId = 1;
 }
 
 ASDNetPlayerPawn::ASDNetPlayerPawn()
@@ -45,9 +48,23 @@ void ASDNetPlayerPawn::TravelToLevel(FName LevelToLoad)
 	}
 }
 
-void ASDNetPlayerPawn::EquipItem(FString MeshName)
+bool ASDNetPlayerPawn::DropItem(ASDBaseEquipment *Equipment)
 {
+	if (CarriedItems->Find(Equipment))
+	{
+		CarriedItems->Remove(Equipment);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 
+void ASDNetPlayerPawn::EquipItem(AActor *Item)
+{
+	FName SocketName = TEXT("Shoulder_LSocket");
+	Item->AttachRootComponentTo(GetMesh(), SocketName, EAttachLocation::SnapToTarget, true);
 }
 
 void ASDNetPlayerPawn::SetProxyController(APlayerController *ClientController)
@@ -55,17 +72,20 @@ void ASDNetPlayerPawn::SetProxyController(APlayerController *ClientController)
 	ProxyController = ClientController;
 }
 
+
 void ASDNetPlayerPawn::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Server pawn overlap event!"));
-	ASDBaseEquipment *GroundItem =  dynamic_cast<ASDBaseEquipment *>(OtherActor);
-	CarriedItems->Add(GroundItem);
-	GroundItem->SetActiveInWorld(false);
-	
-	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
-	if (GameInstance != nullptr)
+	ASDBaseEquipment *GroundItem = dynamic_cast<ASDBaseEquipment *>(OtherActor);
+	if (GroundItem != nullptr)
 	{
-		GameInstance->OnItemPickup.Broadcast(GroundItem);
+		CarriedItems->Add(GroundItem);
+		GroundItem->SetActiveInWorld(false);
+		USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
+		if (GameInstance != nullptr)
+		{
+			GameInstance->OnItemPickup.Broadcast(GroundItem);
+		}
 	}
 }
 

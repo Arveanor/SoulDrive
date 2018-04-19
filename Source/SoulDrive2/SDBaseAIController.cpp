@@ -19,7 +19,7 @@ void ASDBaseAIController::Possess(class APawn *InPawn)
 	if (Bot != nullptr && Bot->BotBehavior != nullptr)
 	{
 		BlackboardComp->InitializeBlackboard(*(Bot->BotBehavior->BlackboardAsset));
-		EnemyKeyID = BlackboardComp->GetKeyID("Enemy");
+		EnemyKeyID = BlackboardComp->GetKeyID("TargetEnemy");
 		EnemyLocationID = BlackboardComp->GetKeyID("Destination");
 
 		BehaviorComp->StartTree(*(Bot->BotBehavior));
@@ -30,7 +30,8 @@ void ASDBaseAIController::setEnemy(APawn * InPawn)
 {
 	if (BlackboardComp)
 	{
- 		BlackboardComp->SetValueAsObject("TargetEnemy", InPawn);
+		StopMovement();
+		BlackboardComp->SetValueAsObject(FName("TargetEnemy"), InPawn);
  		BlackboardComp->SetValueAsVector("Destination", InPawn->GetActorLocation());
 	}
 }
@@ -38,13 +39,13 @@ void ASDBaseAIController::setEnemy(APawn * InPawn)
 void ASDBaseAIController::searchForEnemy()
 {
 	APawn *MyBot = GetPawn();
-	UE_LOG(LogTemp, Warning, TEXT("Searching For Enemy!"));
-	if (MyBot == nullptr)
+	ASDBasePawn *SDBot = dynamic_cast<ASDBasePawn *>(MyBot);
+	if (SDBot == nullptr)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Bot cannot be cast to sd base pawn"));
 		return;
 	}
-
-	const FVector MyLoc = MyBot->GetActorLocation();
+	const FVector MyLoc = SDBot->GetActorLocation();
 	float bestDistSq = MAX_FLT;
 	ASDBasePawn *BestPawn = nullptr;
 
@@ -53,11 +54,14 @@ void ASDBaseAIController::searchForEnemy()
 		ASDBasePawn* TestPawn = Cast<ASDBasePawn>(*It);
 		if (TestPawn)
 		{
-			const float DistSq = FVector::Dist(TestPawn->GetActorLocation(), MyLoc);
-			if (DistSq < bestDistSq)
+			if (TestPawn->GetTeamId() != SDBot->GetTeamId())
 			{
-				bestDistSq = DistSq;
-				BestPawn = TestPawn;
+				const float DistSq = FVector::Dist(TestPawn->GetActorLocation(), MyLoc);
+				if (DistSq < bestDistSq)
+				{
+					bestDistSq = DistSq;
+					BestPawn = TestPawn;
+				}
 			}
 		}
 	}
