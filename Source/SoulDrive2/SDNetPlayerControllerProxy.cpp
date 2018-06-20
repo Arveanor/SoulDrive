@@ -2,8 +2,14 @@
 
 #include "SoulDrive2.h"
 #include "SDGameInstance.h"
+#include "SDGameState.h"
 #include "SDNetPlayerControllerProxy.h"
 
+
+void ASDNetPlayerControllerProxy::PreClientTravel(const FString & PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
+{
+	//SetInputMode(KeyRebindInput);
+}
 
 ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
 {
@@ -102,6 +108,15 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 			if (PlayerHud)
 			{
 				PlayerHud->AddToViewport();
+			}
+		}
+
+		if (wLoadingScreen)
+		{
+			LoadingScreen = CreateWidget<UUserWidget>(this, wLoadingScreen);
+			if (LoadingScreen)
+			{
+				LoadingScreen->AddToViewport();
 			}
 		}
 	}
@@ -353,6 +368,34 @@ FKey ASDNetPlayerControllerProxy::GetKeyForAction(FName ActionName)
 void ASDNetPlayerControllerProxy::OnItemPickup(ASDBaseEquipment * PickedUp)
 {
 	this->AddEquipmentToMenu(PickedUp);
+}
+
+void ASDNetPlayerControllerProxy::SetControllerInputModeGame()
+{
+	SetInputMode(StandardInput);
+}
+
+void ASDNetPlayerControllerProxy::ToggleLoadingScreen()
+{
+	if (LoadingScreen != nullptr)
+	{
+		if (!LoadingScreen->IsInViewport())
+		{
+			LoadingScreen->AddToViewport();
+		}
+		else
+		{
+			LoadingScreen->RemoveFromParent();
+		}
+	}
+}
+
+void ASDNetPlayerControllerProxy::HandleLevelLoaded()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Level loaded for controller!"));
+
+	this->ToggleLoadingScreen();
+
 }
 
 void ASDNetPlayerControllerProxy::PickupItem(const ASDBaseEquipment &PickedUpItem)

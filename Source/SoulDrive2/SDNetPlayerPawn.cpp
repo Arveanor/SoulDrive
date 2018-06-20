@@ -64,7 +64,7 @@ bool ASDNetPlayerPawn::DropItem(ASDBaseEquipment *Equipment)
 void ASDNetPlayerPawn::EquipItem(AActor *Item)
 {
 	FName SocketName = TEXT("Shoulder_LSocket");
-	Item->AttachRootComponentTo(GetMesh(), SocketName, EAttachLocation::SnapToTarget, true);
+	Item->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 }
 
 void ASDNetPlayerPawn::SetProxyController(APlayerController *ClientController)

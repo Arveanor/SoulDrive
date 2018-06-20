@@ -37,8 +37,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Player, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent *SceneRoot;
 
-
+	UPROPERTY()
 	ASDNetPlayerPawn *ServerCharacter;
+
+	UPROPERTY()
 	ASDNetPlayerController *ServerController;
 
 public:	
