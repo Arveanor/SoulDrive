@@ -6,6 +6,7 @@
 #include "SDNetPlayerProxy.h"
 #include "SDNetPlayerControllerProxy.h"
 #include "SoulDrive2GameModeBase.h"
+#include "List.h"
 
 
 AActor* ASoulDrive2GameModeBase::ChoosePlayerStart_Implementation(AController* Player)
@@ -37,42 +38,27 @@ AActor* ASoulDrive2GameModeBase::ChoosePlayerStart_Implementation(AController* P
 }
 
 
-void ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray< TSubclassOf<AActor> > &TileList, FMapGenerationParams Params)
+void ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<int> &TileList, FMapGenerationParams Params)
 {
-	int testIndex = -1;
-	int randMax = 0;
-	int randStart = 0;
-	int attempts = 0;
-	TArray<int> CriticalIndicesList;
+	int RandomIndex = 0;
+	TArray<int> availableIndices;
+	TileList.SetNum(Params.TileCountX * Params.TileCountY);
+	availableIndices.SetNum(TileList.Num());
 
-	for (int i = 0; i < Params.TileCountX; i++)
+	for (int i = 0; i < TileList.Num(); i++)
 	{
-		for (int j = 0; j < Params.TileCountY; j++)
-		{
-			TileList.Add(Params.ActorTiles[FMath::RandRange(0, Params.ActorTiles.Num() - 1)]);
-		}
+		TileList[i] = Params.ActorIds[FMath::RandRange(0, Params.ActorIds.Num() - 1)];
+		availableIndices[i] = i;
 	}
 
-	// Write over locations in tile list. Store those indices in CriticalIndicesList to avoid collisions.
-	for (FMapGenActorPair ActorPair : Params.ExactlyNActors)
+	// Write over locations in tile list. Remove indices from availableIndices to avoid collisions
+	for (TPair<int, int> KeyFrequencyPair : Params.ExactlyNIds)
 	{
-		for (int i = 0; i < ActorPair.Frequency; i++)
+		for (int j = 0; j < KeyFrequencyPair.Value; j++)
 		{
-			attempts = 0;
-			randMax = TileList.Num() - 1;
-			while (!(testIndex >= 0 && testIndex < randMax) && attempts < 10)
-			{
-				randStart = FMath::RandRange(0, randMax);
-				for (testIndex = randStart; CriticalIndicesList.Contains(testIndex); testIndex++);
-
-				// if our location went greater than TileList length, we'll want to re-roll a lower value than the last one we tried.
-				randMax = randStart - 1;
-				attempts++; // don't want to somehow get stuck in her endlessly!
-
-				UE_LOG(LogTemp, Error, TEXT("could not find a location for the next required tile!"));
-			}
-			CriticalIndicesList.Add(testIndex);
-			TileList[testIndex] = ActorPair.ActorTile;
+			RandomIndex = FMath::RandRange(0, availableIndices.Num() - 1);
+			TileList[availableIndices[RandomIndex]] = KeyFrequencyPair.Key;
+			availableIndices.RemoveAt(RandomIndex);
 		}
 	}
 }
@@ -105,4 +91,32 @@ void ASoulDrive2GameModeBase::SpawnPlayerCharacter(APlayerController* Player)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to spawn character!"));
 	}
+}
+
+void ASoulDrive2GameModeBase::BuildLevelMulticast_Implementation(FRandomStream Stream)
+{
+	//GenerateMapData()
+}
+
+bool ASoulDrive2GameModeBase::BuildLevelMulticast_Validate(FRandomStream Stream)
+{
+	return true;
+}
+
+int32 ASoulDrive2GameModeBase::GetListKeyByIndex(TDoubleLinkedList<int32> &List, int32 Index)
+{
+	TDoubleLinkedList<int32>::TIterator *Itr = new TDoubleLinkedList<int32>::TIterator(List.GetHead());
+
+	int32 result = -1;
+	int32 counter = 0;
+	for (int32 value : List)
+	{
+		if (++counter > Index)
+		{
+			result = value;
+			List.RemoveNode(value);
+			break;
+		}
+	}
+	return result;
 }

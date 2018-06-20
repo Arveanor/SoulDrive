@@ -57,6 +57,12 @@ struct FMapGenerationParams
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
 	TArray< TSubclassOf<AActor> > ActorTiles;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
+	TMap<int, int> ExactlyNIds;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
+	TArray <int> ActorIds;
+
 	FMapGenerationParams() { }
 };
 
@@ -78,7 +84,7 @@ public:
 	void GenerateLevel(const TArray<FName> &SubLevels, int MapTileCountX, int MapTileCountY);
 
 	UFUNCTION(BlueprintCallable, Category = "Levels")
-	void GenerateMapData(UPARAM(ref) TArray< TSubclassOf<AActor> > &TileList, FMapGenerationParams Params);
+	void GenerateMapData(UPARAM(ref) TArray<int> &TileList, FMapGenerationParams Params);
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevelActors(const TArray< TSubclassOf<AActor> > &LevelList, int MapTileCountX, int MapTileCountY);
@@ -86,4 +92,11 @@ public:
 	// Called when a level finishes loading to spawn the actual player character and possess it over the dummy loading actor
 	UFUNCTION(BlueprintCallable, Category = "Player")
 	void SpawnPlayerCharacter(APlayerController *Player);
+
+	UFUNCTION(BlueprintCallable, NetMulticast, WithValidation, Reliable, Category = "Levels")
+	void BuildLevelMulticast(FRandomStream Stream);
+
+private:
+	int32 GetListKeyByIndex(TDoubleLinkedList<int32> &List, int32 Index);
+
 };

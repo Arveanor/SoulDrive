@@ -6,3 +6,17 @@
 
 
 
+ASDGameState::ASDGameState()
+{
+	IsMapGenerationCompleted = false;
+}
+
+void ASDGameState::SetIsMapGenerationCompleted(bool generationFlag)
+{
+	IsMapGenerationCompleted = generationFlag;
+}
+
+bool ASDGameState::GetIsMapGenerationCompleted()
+{
+	return IsMapGenerationCompleted;
+}

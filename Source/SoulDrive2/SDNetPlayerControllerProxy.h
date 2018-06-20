@@ -46,6 +46,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
 	UUserWidget* PlayerHud;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
+	UUserWidget* LoadingScreen;
+
 	UFUNCTION(Category = "Networking")
 	void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 	
@@ -87,6 +90,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Levels")
 	void SetControllerInputModeGame();
 
+	UFUNCTION(BlueprintCallable, Category = "Widgets")
+	void ToggleLoadingScreen();
+
+	UFUNCTION(BlueprintCallable, Category = "Levels")
+	void HandleLevelLoaded();
+
 	void PickupItem(const ASDBaseEquipment &PickedUpItem);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
@@ -100,6 +109,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerHud;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
+	TSubclassOf<class UUserWidget> wLoadingScreen;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	uint8 OverwritableAction;
