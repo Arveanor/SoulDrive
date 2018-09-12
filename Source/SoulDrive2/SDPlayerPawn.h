@@ -39,5 +39,4 @@ public:
 	void SetPlayerWalkingSpeed_Implementation();
 	bool SetPlayerWalkingSpeed_Validate();
 
-
 };

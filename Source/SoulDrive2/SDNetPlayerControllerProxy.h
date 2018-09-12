@@ -11,7 +11,6 @@
 #include "SDConstants.h"
 #include "SDBaseSpell.h"
 #include "SDCheatSpell.h"
-#include "SDSunBurstSpell.h"
 #include "SDInventoryWidget.h"
 #include "SDNetPlayerControllerProxy.generated.h"
 
@@ -34,6 +33,13 @@ protected:
 	void OnSpellSlot1Pressed();
 	void OnSpellSlot1Released();
 
+	/* Stores actions to be executed when the player has control again */
+	TQueue<void (ASDNetPlayerControllerProxy::*)(FVector)> InputQueue;
+
+	void (ASDNetPlayerControllerProxy::*NextCommand)(FVector);
+	void (ASDNetPlayerControllerProxy::*CurrentCommand)(FVector);
+	FVector NextCommandVector;
+
 	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
 	UUserWidget* PlayerGameMenu;
 
@@ -51,14 +57,16 @@ protected:
 
 	UFUNCTION(Category = "Networking")
 	void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
+
+	void CastSpell(ASDBaseSpell *SpellToCast);
 	
 public:
 	ASDNetPlayerControllerProxy();
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void MoveToLocation(FHitResult HitResult);
-	void MoveToLocation_Implementation(FHitResult HitResult);
-	bool MoveToLocation_Validate(FHitResult HitResult);
+	void MoveToLocation(FVector target);
+	void MoveToLocation_Implementation(FVector target);
+	bool MoveToLocation_Validate(FVector target);
 
 	UFUNCTION(BlueprintCallable, Category = "Widgets")
 	void OnLaunchPlayerMenu();
@@ -98,6 +106,12 @@ public:
 
 	void PickupItem(const ASDBaseEquipment &PickedUpItem);
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SetMainWeapon(ASDBaseEquipment *Weapon, bool bMainHand);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SetAltWeapon(ASDBaseEquipment *Weapon, bool bMainHand);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerGameMenu;
 
@@ -126,6 +140,8 @@ private:
 	void OnMovementKeyPressed();
 	void OnMovementKeyReleased();
 
+	void SwapWeapons();
+
 	// Server side character and controller to handle real logic for this proxy
 	ASDNetPlayerController *ServerController;
 	ASDNetPlayerPawn *ServerCharacter;
@@ -145,5 +161,9 @@ private:
 	ASDBaseSpell* SpellSlot1;
 	ASDBaseSpell* SpellSlot2;
 	ASDBaseSpell* SpellSlot3;
+
+	TArray<ASDBaseEquipment *> MainWeapons;
+	TArray<ASDBaseEquipment *> AltWeapons;
+	TArray<ASDBaseEquipment*>* CurrentWeaponSet;
 
 };

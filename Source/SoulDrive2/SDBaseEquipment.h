@@ -6,6 +6,13 @@
 #include "SDStatSheet.h"
 #include "SDBaseEquipment.generated.h"
 
+UENUM(BlueprintType)
+enum class EItemType : uint8
+{
+	Weapon UMETA(DisplayName="Weapon"),
+	Shoulder UMETA(DisplayName="Shoulder"),
+};
+
 UCLASS()
 class SOULDRIVE2_API ASDBaseEquipment : public AActor
 {
@@ -31,6 +38,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
 	FName ItemName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
+	EItemType IType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
 	FString MeshName;
