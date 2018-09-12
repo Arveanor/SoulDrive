@@ -14,7 +14,9 @@ class SOULDRIVE2_API ASDNetPlayerController : public AAIController
 	GENERATED_BODY()
 	
 public:
-	void MoveToLocation(FVector &Goal);
-	
-	
+	ASDNetPlayerController();
+	bool MoveToLocation(FVector &Goal);
+	virtual void Tick(float DeltaTime) override;
+private:
+	void SwapWeapons();
 };

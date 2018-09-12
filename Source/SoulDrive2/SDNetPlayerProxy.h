@@ -19,7 +19,7 @@ class SOULDRIVE2_API ASDNetPlayerProxy : public APawn
 
 public:
 	// Sets default values for this character's properties
-	ASDNetPlayerProxy();
+	ASDNetPlayerProxy(const class FObjectInitializer& FOI);
 
 protected:
 	// Called when the game starts or when spawned
@@ -37,11 +37,14 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Player, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent *SceneRoot;
 
-	UPROPERTY()
+	UPROPERTY(replicated)
 	ASDNetPlayerPawn *ServerCharacter;
 
-	UPROPERTY()
+	UPROPERTY(replicated)
 	ASDNetPlayerController *ServerController;
+
+	UPROPERTY()
+	FVector LerpTarget;
 
 public:	
 	// Called every frame
@@ -72,6 +75,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player")
 	ASDNetPlayerPawn *GetServerCharacter();
+
+	UFUNCTION(Reliable, Client, WithValidation)
+	void SetLerpTarget(FVector target);
+	void SetLerpTarget_Implementation(FVector target);
+	bool SetLerpTarget_Validate(FVector target);
 
 	UFUNCTION(Reliable, Client, WithValidation)
 	void SetServerController(ASDNetPlayerController *NetControllerS);

@@ -13,20 +13,30 @@ class SOULDRIVE2_API ASDBaseSpell : public AActor
 	
 public:	
 	// Sets default values for this actor's properties
-	ASDBaseSpell();
+	ASDBaseSpell(const class FObjectInitializer& FOI);
+
+	virtual void Init(AController* OwnedBy);
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	APawn* Caster;
+	UPROPERTY(replicated)
+	AController* Caster;
+	UPROPERTY(replicated)
+	ACharacter* CasterCharacter;
+	UPROPERTY(replicated)
+	int spellTestInt;
 	int TeamId;
+
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	virtual void CastSpell(FVector target);
 	virtual void HandleTarget(AActor *Target, bool IsAlly);
+	AController* GetCaster();
+	ACharacter* GetCasterCharacter();
 
 	void SetTeamId(int InTeamId);
 	int GetTeamId();

@@ -6,7 +6,8 @@
 
 
 // Sets default values
-ASDNetPlayerProxy::ASDNetPlayerProxy()
+ASDNetPlayerProxy::ASDNetPlayerProxy(const class FObjectInitializer& FOI)
+	: Super (FOI)
 {
 	bReplicates = true;
 	SetActorEnableCollision(false);
@@ -28,6 +29,8 @@ ASDNetPlayerProxy::ASDNetPlayerProxy()
 	PlayerCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
 	PlayerCameraComponent->SetupAttachment(MainCameraBoom, USpringArmComponent::SocketName);
 	PlayerCameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+
+	LerpTarget = FVector(0.0f, 0.0f, 0.0f);
 
 //	this->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASDNetPlayerProxy::OnOverlapBegin);
 // 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
@@ -52,7 +55,6 @@ void ASDNetPlayerProxy::BeginPlay()
 				ServerController = GetWorld()->SpawnActor<ASDNetPlayerController>(NetControllerClass, SpawnParams);
 				ServerController->Possess(ServerCharacter);
 				SetServerController(ServerController);
-				ServerCharacter->SetProxyController(dynamic_cast<APlayerController *>(this->GetController()));
 				if (ServerController != nullptr)
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Successfully created server controller!"));
@@ -74,18 +76,33 @@ void ASDNetPlayerProxy::BeginPlay()
 	}
 }
 
+void ASDNetPlayerProxy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	DOREPLIFETIME(ASDNetPlayerProxy, ServerController);
+	DOREPLIFETIME(ASDNetPlayerProxy, ServerCharacter);
+}
+
 // Called every frame
 void ASDNetPlayerProxy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (ServerCharacter != nullptr)
-	{
-		FVector ServerClientDistance = this->GetActorLocation() - ServerCharacter->GetActorLocation();
-		if (ServerClientDistance.Size() > 50.0f)
+// 	if (GetNetMode() == ENetMode::NM_ListenServer)
+// 	{
+		if (ServerCharacter != nullptr)
 		{
-			this->SetActorLocation(FMath::Lerp(this->GetActorLocation(), ServerCharacter->GetActorLocation(), 0.01));
+			FVector ServerClientDistance = this->GetActorLocation() - ServerCharacter->GetActorLocation();
+			if (ServerClientDistance.Size() > 50.0f)
+			{
+				ServerCharacter->IsMoving = true;
+				this->SetActorLocation(FMath::Lerp(this->GetActorLocation(), ServerCharacter->GetActorLocation(), 0.01));
+				this->SetLerpTarget(ServerCharacter->GetActorLocation());
+			}
+			else
+			{
+				ServerCharacter->IsMoving = false;
+			}
 		}
-	}
+/*	}*/
 }
 
 // Called to bind functionality to input
@@ -129,6 +146,16 @@ ASDNetPlayerController * ASDNetPlayerProxy::GetServerController()
 ASDNetPlayerPawn * ASDNetPlayerProxy::GetServerCharacter()
 {
 	return ServerCharacter;
+}
+
+void ASDNetPlayerProxy::SetLerpTarget_Implementation(FVector target)
+{
+	this->SetActorLocation(FMath::Lerp(this->GetActorLocation(), target, 0.01));
+}
+
+bool ASDNetPlayerProxy::SetLerpTarget_Validate(FVector target)
+{
+	return true;
 }
 
 void ASDNetPlayerProxy::SetServerController_Implementation(ASDNetPlayerController *NetControllerS)

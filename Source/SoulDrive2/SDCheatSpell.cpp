@@ -17,7 +17,7 @@ void ASDCheatSpell::BeginPlay()
 }
 
 
-void ASDCheatSpell::Init(APawn* OwnedBy)
+void ASDCheatSpell::Init(AController* OwnedBy)
 {
 	Caster = OwnedBy;
 }
@@ -27,19 +27,19 @@ void ASDCheatSpell::CastSpell(FVector target)
 	UE_LOG(LogTemp, Warning, TEXT("SpellSlot0 being cast in cheat spell class"));
 	if (Caster != nullptr)
 	{
-		FActorSpawnParameters SpawnInfo;
-		TSubclassOf<AActor> TargetClass = ASDProjectile::StaticClass();
-		FVector SpawnAt = Caster->GetTransform().GetLocation();
-		FRotator SpawnRotation = Caster->GetBaseAimRotation();
-		SpawnAt.X += Caster->GetTransform().GetRotation().GetAxisX().X * 55.0f;
-		SpawnAt.Y += Caster->GetTransform().GetRotation().GetAxisY().Y * 55.0f;
-		FTransform SpawnTransform(SpawnRotation, SpawnAt);
-		auto ResultActor = Cast<ASDProjectile>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, TargetClass, SpawnTransform));
-		if (ResultActor != nullptr)
-		{
-			ResultActor->Init(CheatProjectileMesh, ProjectileVelocity);
-			UGameplayStatics::FinishSpawningActor(ResultActor, SpawnTransform);
-		}
+// 		FActorSpawnParameters SpawnInfo;
+// 		TSubclassOf<AActor> TargetClass = ASDProjectile::StaticClass();
+// 		FVector SpawnAt = Caster->GetTransform().GetLocation();
+// 		FRotator SpawnRotation = Caster->GetBaseAimRotation();
+// 		SpawnAt.X += Caster->GetTransform().GetRotation().GetAxisX().X * 55.0f;
+// 		SpawnAt.Y += Caster->GetTransform().GetRotation().GetAxisY().Y * 55.0f;
+// 		FTransform SpawnTransform(SpawnRotation, SpawnAt);
+// 		auto ResultActor = Cast<ASDProjectile>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, TargetClass, SpawnTransform));
+// 		if (ResultActor != nullptr)
+// 		{
+// 			ResultActor->Init(CheatProjectileMesh, ProjectileVelocity);
+// 			UGameplayStatics::FinishSpawningActor(ResultActor, SpawnTransform);
+// 		}
 	}
 	else
 	{
