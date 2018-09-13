@@ -3,12 +3,38 @@
 #include "SoulDrive2.h"
 #include "SDGameInstance.h"
 #include "SDGameState.h"
+#include "SDFireBoltSpell.h"
+#include "SDCelestialFragmentSpell.h"
+#include "SDSunBurstSpell.h"
 #include "SDNetPlayerControllerProxy.h"
 
 
 void ASDNetPlayerControllerProxy::PreClientTravel(const FString & PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
 {
 	//SetInputMode(KeyRebindInput);
+}
+
+void ASDNetPlayerControllerProxy::CastSpell(ASDBaseSpell *SpellToCast)
+{
+	FVector TargetLocation(0.0f, 0.0f, 0.0f);
+	if (SpellToCast != nullptr)
+	{
+		FHitResult Hit;
+		GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+		if (Hit.bBlockingHit)
+		{
+			TargetLocation = Hit.Location;
+		}
+		if (ServerController == nullptr)
+		{
+			ServerController = PlayerProxy->GetServerController();
+		}
+		if (ServerController != nullptr)
+		{
+			SpellToCast->Init(ServerController);
+			SpellToCast->CastSpell(TargetLocation);
+		}
+	}
 }
 
 ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
@@ -20,6 +46,9 @@ ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
 	MpMenuCanBeOpened = true;
 	OverwritableAction = SDConstants::HotKeyOverrides::NO_ACTION_WRITABLE;
 	StandardInput.SetHideCursorDuringCapture(false);
+	MainWeapons.SetNumZeroed(2, true);
+	AltWeapons.SetNumZeroed(2, true);
+	CurrentWeaponSet = &MainWeapons;
 
 }
 
@@ -33,8 +62,14 @@ void ASDNetPlayerControllerProxy::PlayerTick(float DeltaTime)
 		GetHitResultUnderCursor(ECC_Visibility, false, Hit);
 		if (Hit.bBlockingHit)
 		{
-			MoveToLocation(Hit);
+			MoveToLocation(Hit.Location);
 		}
+	}
+	if (NextCommand != nullptr)
+	{
+		CurrentCommand = NextCommand;
+		NextCommand = nullptr;
+		(this->*CurrentCommand)(NextCommandVector);
 	}
 }
 
@@ -62,6 +97,8 @@ void ASDNetPlayerControllerProxy::SetupInputComponent()
 
 	InputComponent->BindAction("LaunchInventoryMenu", IE_Pressed, this, &ASDNetPlayerControllerProxy::OnLaunchInventoryMenu);
 	InputComponent->BindAction("LaunchInventoryMenu", IE_Released, this, &ASDNetPlayerControllerProxy::OnCloseInventoryMenu);
+
+	InputComponent->BindAction("SwapWeapons", IE_Pressed, this, &ASDNetPlayerControllerProxy::SwapWeapons);
 }
 
 void ASDNetPlayerControllerProxy::BeginPlay()
@@ -92,8 +129,6 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 
 		if (wPlayerGameMenu)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("FUck you asshole"))
-
 			PlayerGameMenu = CreateWidget<UUserWidget>(this, wPlayerGameMenu);
 		}
 
@@ -125,7 +160,8 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 	{
 		FActorSpawnParameters SpawnInfo;
 		SpawnInfo.Instigator = GetPawn();
-		SpellSlot0 = GetWorld()->SpawnActor<ASDSunBurstSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
+		SpellSlot0 = GetWorld()->SpawnActor<ASDCelestialFragmentSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
+		SpellSlot1 = GetWorld()->SpawnActor<ASDFireBoltSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
 		ASDCheatSpell* ChildRef = dynamic_cast<ASDCheatSpell*>(SpellSlot0);
 
 		if (ServerController == nullptr && PlayerProxy != nullptr)
@@ -136,7 +172,7 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 		if (ChildRef != nullptr && ServerController != nullptr)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Initializing SpellSlot0"));
-			ChildRef->Init(ServerController->GetPawn());
+			ChildRef->Init(ServerController);
 		}
 		else
 		{
@@ -172,11 +208,12 @@ void ASDNetPlayerControllerProxy::OnSpellSlot0Pressed()
 		{
 			ServerController = PlayerProxy->GetServerController();
 		}
-		if (ServerController != nullptr)
-		{
-			if(AsCheatSpell != nullptr) AsCheatSpell->Init(ServerController->GetPawn());
+// 		if (ServerController != nullptr)
+// 		{
+// 			if(AsCheatSpell != nullptr) AsCheatSpell->Init(ServerController);
+		SpellSlot0->Init(ServerController);
 			SpellSlot0->CastSpell(TargetLocation);
-		}
+/*		}*/
 	}
 	else
 	{
@@ -191,15 +228,10 @@ void ASDNetPlayerControllerProxy::OnSpellSlot0Released()
 
 void ASDNetPlayerControllerProxy::OnSpellSlot1Pressed()
 {
-
+	CastSpell(SpellSlot1);
 }
 
-void ASDNetPlayerControllerProxy::OnSpellSlot1Released()
-{
-
-}
-
-void ASDNetPlayerControllerProxy::MoveToLocation_Implementation(FHitResult HitResult)
+void ASDNetPlayerControllerProxy::MoveToLocation_Implementation(FVector target)
 {
 	if (ServerController == nullptr && PlayerProxy != nullptr)
 	{
@@ -211,13 +243,19 @@ void ASDNetPlayerControllerProxy::MoveToLocation_Implementation(FHitResult HitRe
 		PlayerProxy = (ASDNetPlayerProxy *)GetPawn();
 		ServerController = PlayerProxy->GetServerController();
 	}
-	if (HitResult.bBlockingHit && ServerController != nullptr)
+	if (!ServerController->MoveToLocation(target))
 	{
-		ServerController->MoveToLocation(HitResult.Location);
+		NextCommand = &ASDNetPlayerControllerProxy::MoveToLocation;
+		NextCommandVector = target;
 	}
 }
 
-bool ASDNetPlayerControllerProxy::MoveToLocation_Validate(FHitResult HitResult)
+void ASDNetPlayerControllerProxy::OnSpellSlot1Released()
+{
+
+}
+
+bool ASDNetPlayerControllerProxy::MoveToLocation_Validate(FVector target)
 {
 	return true;
 }
@@ -436,4 +474,23 @@ void ASDNetPlayerControllerProxy::OnMovementKeyPressed()
 void ASDNetPlayerControllerProxy::OnMovementKeyReleased()
 {
 	bMoveToLocation = false;
+}
+
+void ASDNetPlayerControllerProxy::SwapWeapons()
+{
+	if (ServerCharacter == nullptr)
+	{
+		ServerCharacter = PlayerProxy->GetServerCharacter();
+	}
+	ServerCharacter->SwapWeapons();
+}
+
+void ASDNetPlayerControllerProxy::SetAltWeapon(ASDBaseEquipment * Weapon, bool bMainHand)
+{
+	AltWeapons[bMainHand ? 0 : 1] = Weapon;
+}
+
+void ASDNetPlayerControllerProxy::SetMainWeapon(ASDBaseEquipment *Weapon, bool bMainHand)
+{
+	MainWeapons[bMainHand ? 0 : 1] = Weapon;
 }

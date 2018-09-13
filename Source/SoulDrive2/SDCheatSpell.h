@@ -15,7 +15,7 @@ class SOULDRIVE2_API ASDCheatSpell : public ASDBaseSpell
 	GENERATED_BODY()
 	
 public:
-	void Init(APawn* OwnedBy);
+	void Init(AController* OwnedBy) override;
 
 protected:
 	

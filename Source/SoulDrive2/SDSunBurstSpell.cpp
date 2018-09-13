@@ -24,7 +24,7 @@ void ASDSunBurstSpell::HandleTarget(AActor *Target, bool IsAlly)
 {
 	const FDamageEvent DamageEvent;
 	UE_LOG(LogTemp, Warning, TEXT("Sunburst handle target happening"));
-	if (GetInstigator() != nullptr)
+	if (GetInstigator() != nullptr && !IsAlly)
 	{
 		Target->TakeDamage(10.0f, DamageEvent, GetInstigator()->GetController(), this);
 	}
