@@ -4,34 +4,31 @@
 
 #include "GameFramework/GameModeBase.h"
 #include "Runtime/Core/Public/Containers/Map.h"
+#include "SDTileDescriptor.h"
 #include "SoulDrive2GameModeBase.generated.h"
 
 USTRUCT(BlueprintType)
-struct FMapGenerationPair
+struct FTileArray
 {
 	GENERATED_BODY()
-
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-		FName TileName;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-		int Frequency;
+	TArray<USDTileDescriptor*> TileArray;
 
-	FMapGenerationPair() { }
+	FTileArray() { }
 };
 
 USTRUCT(BlueprintType)
-struct FMapGenActorPair
-{
+struct FEdgeAlignmentPair {
+
 	GENERATED_BODY()
 
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-		TSubclassOf <AActor> ActorTile;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-		int Frequency;
+	ProceduralTileEdges Key;
 
-	FMapGenActorPair() { }
+	TSet<ProceduralTileEdges> Value;
+
+	FEdgeAlignmentPair() { }
 };
 
 USTRUCT(BlueprintType)
@@ -40,28 +37,26 @@ struct FMapGenerationParams
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-	TArray<FName> BasicTiles;
+	int TileCountX;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-		int TileCountX;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-		int TileCountY;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-	TArray<FMapGenerationPair> ExactlyNTiles;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-		TArray<FMapGenActorPair> ExactlyNActors;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-	TArray< TSubclassOf<AActor> > ActorTiles;
+	int TileCountY;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
 	TMap<int, int> ExactlyNIds;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
+	TMap<ProceduralTileEdges, FTileArray> TilesByEdge;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
 	TArray <int> ActorIds;
+
+	// This needs to be created at map gen launch, based on available tiles and constants, I think
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
+	TArray<FEdgeAlignmentPair> EdgeMap;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
+	TArray<USDTileDescriptor *> TileSet;
 
 	FMapGenerationParams() { }
 };
@@ -83,8 +78,16 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevel(const TArray<FName> &SubLevels, int MapTileCountX, int MapTileCountY);
 
+	/****************************************************************************/
+	/* Generates a list of ints representing the tiles to be loaded on a map.   
+	** The list is 1 dimensional and must be mapped back to 2d space by the 
+	** caller.
+	** TileList is the output list containing all the tile references.
+	** Params is a struct containing all of the necessary data about placeable
+	** tiles and their relationships.                                           */
+	/****************************************************************************/
 	UFUNCTION(BlueprintCallable, Category = "Levels")
-	void GenerateMapData(UPARAM(ref) TArray<int> &TileList, FMapGenerationParams Params);
+	void GenerateMapData(UPARAM(ref) TArray<USDTileDescriptor*> &TileList, FMapGenerationParams Params);
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevelActors(const TArray< TSubclassOf<AActor> > &LevelList, int MapTileCountX, int MapTileCountY);
@@ -93,10 +96,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player")
 	void SpawnPlayerCharacter(APlayerController *Player);
 
-	UFUNCTION(BlueprintCallable, NetMulticast, WithValidation, Reliable, Category = "Levels")
-	void BuildLevelMulticast(FRandomStream Stream);
-
+	int IndexFromPoint(int x, int y, int maxX, int maxY);
 private:
 	int32 GetListKeyByIndex(TDoubleLinkedList<int32> &List, int32 Index);
-
+	uint8 GetEdgeMapIndex(ProceduralTileEdges inEdge, TArray<FEdgeAlignmentPair> Map);
 };
