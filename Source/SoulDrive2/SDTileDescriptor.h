@@ -3,34 +3,32 @@
 #pragma once
 #include "SDTileDescriptor.generated.h"
 
-UENUM(BlueprintType)
-enum class ProceduralTileEdges : uint8 {
-	Open,
-	Hall_Door,
-	Hall_Open,
-	Hall_Side,
-	Wall_Main,
-};
-
 /**
  * 
  */
 UCLASS()
-class SOULDRIVE2_API USDTileDescriptor : public UObject
+class SOULDRIVE2_API ASDTileDescriptor : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	USDTileDescriptor();
+	ASDTileDescriptor();
 
+	UPROPERTY(BlueprintReadWrite)
 	FName name;
-	int rotation;
-	ProceduralTileEdges TopEdge;
-	ProceduralTileEdges LeftEdge;
-	ProceduralTileEdges RightEdge;
-	ProceduralTileEdges BottomEdge;
 
-	ProceduralTileEdges GetFacingEdge(int direction);
-	void CopyDescriptorData(USDTileDescriptor* CopyFrom);
-	bool isValidForNeighbors(TArray<ProceduralTileEdges> neighbors);
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	int rotation;
+// 
+// 	UPROPERTY(BlueprintReadWrite)
+// 	ProceduralTileEdges TopEdge;
+// 
+// 	UPROPERTY(BlueprintReadWrite)
+// 	ProceduralTileEdges LeftEdge;
+// 
+// 	UPROPERTY(BlueprintReadWrite)
+// 		ProceduralTileEdges RightEdge;
+// 
+// 	UPROPERTY(BlueprintReadWrite)
+// 		ProceduralTileEdges BottomEdge;
 };

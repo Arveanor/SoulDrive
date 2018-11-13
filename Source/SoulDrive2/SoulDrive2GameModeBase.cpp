@@ -37,41 +37,60 @@ AActor* ASoulDrive2GameModeBase::ChoosePlayerStart_Implementation(AController* P
 	return result;
 }
 
-
-void ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<USDTileDescriptor*> &TileList, FMapGenerationParams Params)
+/*
+* This function will fill TileList with descriptors that can be used to load up a map.  TileList should be passed in as an empty TArray, and if not, it's contents will be ignored and overwritten.
+* Params contains all of the necessary data to guide the creation of the map data.
+*/
+int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileList, UPARAM(ref) TArray<FIntPair> &ActorLocations, FMapGenerationParams Params)
 {
+	if (Params.TileSet.Num() < 1)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Cannot generate map, provided TileSet was empty. Exiting..."));
+		return -1;
+	}
+
+	if (Params.TileCountX < 1 || Params.TileCountY < 1)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Cannot generate map, provided Tile Count is invalid (MaxX = %d, MaxY = %d). Exiting..."), Params.TileCountX, Params.TileCountY);
+		return -1;
+	}
 	int RandomIndex = 0;
 	/* 
 	** Array of indices not yet overwritten by a "necessary" tile.  Will be filled in with all
 	** of the possible indices initially, and those elements will be removed when a needed tile is added on the second pass
 	*/
 	TArray<int> availableIndices;
-	TArray<USDTileDescriptor *> possibleTilesForMap; // 0 as nullptr
-	TSet<USDTileDescriptor *> candidateTiles;
+	TArray<int> openIndices; // Places we can add actors
+	TSet<FTileDescriptor *> candidateTiles;
 	TArray<ProceduralTileEdges> neighborEdges;
-	TArray<USDTileDescriptor *> neighborTiles;
-	TileList.Init(0, Params.TileCountX * Params.TileCountY);
+	TArray<FTileDescriptor *> neighborTiles;
+	neighborEdges.SetNum(4);
+	neighborTiles.SetNum(4);
+	TileList.Init(FTileDescriptor(), Params.TileCountX * Params.TileCountY + 1);
 	availableIndices.SetNum(TileList.Num());
-	USDTileDescriptor* TileToAdd;
+	FTileDescriptor* TileToAdd;
+	
+	constructEdgeMap(Params.EdgeMap);
 	// Ok so until *after* we place a tile that is past the existing borders, we do not turn, that is why
 	// This is "previous" neighbors count, and not neighbors count. Please stop getting confused and changing it
 	int previousNeighborsCount = 0;
 	int currentDirection = 0; // consider 0 degree rotation to be up
-	int prevX = 0;
-	int prevY = 0;
+	int index = 0;
+	int prevX = Params.TileCountX / 2;
+	int prevY = (Params.TileCountY / 2) - 1;
 
 	// Loop over all locations to be filled in, spiral outward from the center point and add new Tiles that have edges that
 	// align with their already placed neighbors
 	for (int i = 0; i < TileList.Num(); i++)
 	{
-		previousNeighborsCount = 0; // reset to 0 so we can recalculate it for every tile
-
 		// Determine if we need to rotate our tile laying direction to keep the spiral going
 		if (previousNeighborsCount == 1)
 		{
 			currentDirection += 90;
 			currentDirection = currentDirection % 360;
 		}
+
+		previousNeighborsCount = 0; // reset to 0 so we can recalculate it for every tile
 
 		// Update the (x, y) of our next tile based on our tile laying direction
 		switch (currentDirection)
@@ -90,33 +109,74 @@ void ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<USDTileDescript
 		}
 
 		// put all of our 4 neighbors into a happy little array
-		neighborTiles[0] = TileList[IndexFromPoint(prevX, prevY + 1, Params.TileCountX, Params.TileCountY)];
-		neighborTiles[1] = TileList[IndexFromPoint(prevX + 1, prevY, Params.TileCountX, Params.TileCountY)];
-		neighborTiles[2] = TileList[IndexFromPoint(prevX, prevY - 1, Params.TileCountX, Params.TileCountY)];
-		neighborTiles[3] = TileList[IndexFromPoint(prevX - 1, prevY, Params.TileCountX, Params.TileCountY)];
+		if ((index = IndexFromPoint(prevX, prevY + 1, Params.TileCountX, Params.TileCountY)) < TileList.Num() && index >= 0)
+		{
+			neighborTiles[0] = &TileList[index];
+		}
+		else
+		{
+			neighborTiles[0] = &Params.TileSet[0];
+		}
+		if ((index = IndexFromPoint(prevX + 1, prevY, Params.TileCountX, Params.TileCountY)) < TileList.Num() && index >= 0)
+		{
+			neighborTiles[1] = &TileList[index];
+		}
+		else
+		{
+			neighborTiles[1] = &Params.TileSet[0];
+		}
+		if ((index = IndexFromPoint(prevX, prevY - 1, Params.TileCountX, Params.TileCountY)) < TileList.Num() && index >= 0)
+		{
+			neighborTiles[2] = &TileList[index];
+		}
+		else
+		{
+			neighborTiles[2] = &Params.TileSet[0];
+		}
+		if ((index = IndexFromPoint(prevX - 1, prevY, Params.TileCountX, Params.TileCountY)) < TileList.Num() && index >= 0)
+		{
+			neighborTiles[3] = &TileList[index];
+		}
+		else
+		{
+			neighborTiles[3] = &Params.TileSet[0];
+		}
 		for (int j = 0; j < 4; j++)
 		{
 			if (neighborTiles[j]->name != FName("EmptySpace")) // check if we have an already applied neighbor tile or just a placeholder
 			{
 				previousNeighborsCount++;
 			}
-			neighborEdges[j] = neighborTiles[j]->GetFacingEdge(j * 90); // we really care about which edge of our neighbor tile faces us, the rest is irrelevant!
+			// we really care about which edge of our neighbor tile faces us, the rest is irrelevant!
+			neighborEdges[j] = GetFacingEdge(j * 90, neighborTiles[j]);
 		}		
 
 		// Check every tile for this map for validity with our neighborEdges array, the ones that pass will be in a random roll to get chosen
 		candidateTiles.Reset();
-		for (USDTileDescriptor* Tile : Params.TileSet)
+		for (FTileDescriptor Tile : Params.TileSet)
 		{
-			// We're going to make a new tile so that we can actually control rotation at each point
-			TileToAdd = NewObject<USDTileDescriptor>();
-			TileToAdd->CopyDescriptorData(candidateTiles.Array()[FMath::RandRange(0, candidateTiles.Num() - 1)]);
-			if (TileToAdd->isValidForNeighbors(neighborEdges))
+			if (Tile.name != FName("EmptySpace"))
 			{
-				candidateTiles.Add(TileToAdd);
+				// We're going to make a new tile so that we can actually control rotation at each point
+				TileToAdd = new FTileDescriptor();
+				CopyDescriptorData(&Tile, TileToAdd);
+				candidateTiles.Append(isValidForNeighbors(neighborEdges, TileToAdd, Params.EdgeMap));
 			}
 		}
 
-		TileList[IndexFromPoint(prevX, prevY, Params.TileCountX, Params.TileCountY)] = candidateTiles.Array()[FMath::RandRange(0, candidateTiles.Num() - 1)];
+		index = IndexFromPoint(prevX, prevY, Params.TileCountX, Params.TileCountY);
+		if (index >= 0 && index < TileList.Num())
+		{
+			TileList[index] = *(candidateTiles.Array()[FMath::RandRange(0, candidateTiles.Num() - 1)]);
+			if (TileList[index].name == FName("Floor"))
+			{
+				openIndices.Add(index);
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("next tile being placed at invalid location (%d, %d)"), prevX, prevY);
+		}
 	}
 
 	for (int i = 0; i < TileList.Num(); i++)
@@ -125,6 +185,21 @@ void ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<USDTileDescript
 		availableIndices[i] = i;
 	}
 
+	for (int actor : Params.ActorIds)
+	{
+		int i = FMath::FRandRange(0, openIndices.Num() - 1);
+		openIndices.RemoveAt(i);
+
+	}
+
+	ActorLocations.Add(FIntPair(openIndices[0], 0));
+
+// 	for (int32 i : openIndices)
+// 	{
+// 		ActorLocations.Add(FIntPair(openIndices[i], 0));
+// 	}
+
+	return TileList.Num();
 	// Write over locations in tile list. Remove indices from availableIndices to avoid collisions
 // 	for (TPair<int, int> KeyFrequencyPair : Params.ExactlyNIds)
 // 	{
@@ -169,7 +244,7 @@ void ASoulDrive2GameModeBase::SpawnPlayerCharacter(APlayerController* Player)
 
 int ASoulDrive2GameModeBase::IndexFromPoint(int x, int y, int maxX, int maxY)
 {
-	return x + y * maxY;
+	return x + y * maxX;
 }
 
 int32 ASoulDrive2GameModeBase::GetListKeyByIndex(TDoubleLinkedList<int32> &List, int32 Index)
@@ -200,4 +275,123 @@ uint8 ASoulDrive2GameModeBase::GetEdgeMapIndex(ProceduralTileEdges inEdge, TArra
 		}
 	}
 	return -1;
+}
+
+ProceduralTileEdges ASoulDrive2GameModeBase::GetFacingEdge(int direction, FTileDescriptor* Desc)
+{
+	direction -= Desc->rotation;
+	direction = (direction + 360) % 360;
+	switch (direction)
+	{
+	case 0:
+		return Desc->TopEdge;
+		break;
+	case 90:
+		return Desc->RightEdge;
+		break;
+	case 180:
+		return Desc->BottomEdge;
+		break;
+	case 270:
+		return Desc->LeftEdge;
+		break;
+	default:
+		return Desc->TopEdge;
+	}
+}
+
+void ASoulDrive2GameModeBase::CopyDescriptorData(FTileDescriptor* CopyFrom, FTileDescriptor* CopyTo)
+{
+	CopyTo->name = CopyFrom->name;
+	CopyTo->LocalId = CopyFrom->LocalId;
+	CopyTo->TopEdge = CopyFrom->TopEdge;
+	CopyTo->RightEdge = CopyFrom->RightEdge;
+	CopyTo->BottomEdge = CopyFrom->BottomEdge;
+	CopyTo->LeftEdge = CopyFrom->LeftEdge;
+	CopyTo->rotation = CopyFrom->rotation;
+}
+
+TArray<FTileDescriptor *> ASoulDrive2GameModeBase::isValidForNeighbors(TArray<ProceduralTileEdges> neighbors, FTileDescriptor* TileToAdd, TArray<FEdgeAlignmentPair> & EdgeMap)
+{
+	// Loop through every tile in the tileset (nope! handled by caller)
+	ProceduralTileEdges Edge;
+	uint8 index;
+	uint8 acceptedEdgesCount = 0;
+	TArray<FTileDescriptor *> returnableTiles; // lets me add multiple different rotations to the candidate pool!
+	FTileDescriptor* NextPermutation;
+
+	// For a tile, check it at all rotations
+	for (int i = 0; i < 4; i++)
+	{
+		acceptedEdgesCount = 0;
+		NextPermutation = new FTileDescriptor();
+		CopyDescriptorData(TileToAdd, NextPermutation);
+		NextPermutation->rotation = i * 90;
+		// For each rotation, check all of my sides with the candidate neighbors
+		for (int j = 0; j < 4; j++)
+		{
+			Edge = GetFacingEdge(j * 90, NextPermutation);
+			index = GetEdgeMapIndex(Edge, EdgeMap);
+			if (EdgeMap[index].Value.Contains(Edge))
+			{
+				acceptedEdgesCount++;
+			}
+		}
+		if (acceptedEdgesCount == 4)
+		{
+			returnableTiles.Add(NextPermutation);
+		}
+	}
+
+	return returnableTiles;
+}
+
+void ASoulDrive2GameModeBase::constructEdgeMap(TArray<FEdgeAlignmentPair>& EdgeMap)
+{
+	FEdgeAlignmentPair FirstPair;
+	FEdgeAlignmentPair SecondPair;
+	FEdgeAlignmentPair ThirdPair;
+	FEdgeAlignmentPair FourthPair;
+	FEdgeAlignmentPair FifthPair;
+	
+	TSet<ProceduralTileEdges> FirstValue;
+	TSet<ProceduralTileEdges> SecondValue;
+	TSet<ProceduralTileEdges> ThirdValue;
+	TSet<ProceduralTileEdges> FourthValue;
+	TSet<ProceduralTileEdges> FifthValue;
+
+	FirstValue.Add(ProceduralTileEdges::Hall_Open);
+	FirstPair.Key = ProceduralTileEdges::Hall_Door;
+	FirstPair.Value = FirstValue;
+
+	SecondValue.Add(ProceduralTileEdges::Hall_Door);
+	SecondValue.Add(ProceduralTileEdges::Hall_Open);
+	SecondValue.Add(ProceduralTileEdges::Hall_Side);
+	SecondValue.Add(ProceduralTileEdges::Wall_Mid);
+	SecondValue.Add(ProceduralTileEdges::Open);
+	SecondPair.Key = ProceduralTileEdges::Open;
+	SecondPair.Value = SecondValue;
+
+	ThirdValue.Add(ProceduralTileEdges::Hall_Open);
+	ThirdValue.Add(ProceduralTileEdges::Hall_Door);
+	ThirdPair.Key = ProceduralTileEdges::Hall_Open;
+	ThirdPair.Value = ThirdValue;
+
+	FourthValue.Add(ProceduralTileEdges::Open);
+	FourthValue.Add(ProceduralTileEdges::Wall_Mid);
+	FourthPair.Key = ProceduralTileEdges::Hall_Side;
+	FourthPair.Value = FourthValue;
+
+	FifthValue.Add(ProceduralTileEdges::Wall_Mid);
+	FifthValue.Add(ProceduralTileEdges::Hall_Side);
+	FifthValue.Add(ProceduralTileEdges::Open);
+	FifthPair.Key = ProceduralTileEdges::Wall_Mid;
+	FifthPair.Value = FifthValue;
+
+	EdgeMap.Add(FirstPair);
+	EdgeMap.Add(SecondPair);
+	EdgeMap.Add(ThirdPair);
+	EdgeMap.Add(FourthPair);
+	EdgeMap.Add(FifthPair);
+
 }

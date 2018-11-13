@@ -7,13 +7,76 @@
 #include "SDTileDescriptor.h"
 #include "SoulDrive2GameModeBase.generated.h"
 
+UENUM(BlueprintType)
+enum class ProceduralTileEdges : uint8 {
+	Open,
+	Hall_Door,
+	Hall_Open,
+	Hall_Side,
+	Wall_Main,
+	Wall_Corner,
+	Wall_Mid
+};
+
+USTRUCT(BlueprintType)
+struct FIntPair {
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	uint8 Key;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	uint8 Value;
+
+	FIntPair(uint8 Key, uint8 Value)
+		: Key(Key), Value(Value)
+	{}
+
+	FIntPair() {}
+};
+
+USTRUCT(BlueprintType)
+struct FTileDescriptor
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	uint8 LocalId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int rotation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ProceduralTileEdges TopEdge;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ProceduralTileEdges LeftEdge;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ProceduralTileEdges RightEdge;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ProceduralTileEdges BottomEdge;
+
+	FTileDescriptor()
+		: name(TEXT("EmptySpace")), LocalId(0), rotation(0), TopEdge(ProceduralTileEdges::Open), RightEdge(ProceduralTileEdges::Open), BottomEdge(ProceduralTileEdges::Open), LeftEdge(ProceduralTileEdges::Open)
+	{ }
+
+	FTileDescriptor(FName& inName, uint8 LocalId, int inRotation, ProceduralTileEdges InTopEdge, ProceduralTileEdges InRightEdge, ProceduralTileEdges InBottomEdge, ProceduralTileEdges InLeftEdge)
+		: name(inName), rotation(inRotation), TopEdge(InTopEdge), RightEdge(InRightEdge), BottomEdge(InBottomEdge), LeftEdge(InLeftEdge)
+	{ }
+};
+
 USTRUCT(BlueprintType)
 struct FTileArray
 {
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-	TArray<USDTileDescriptor*> TileArray;
+	TArray<ASDTileDescriptor*> TileArray;
 
 	FTileArray() { }
 };
@@ -56,7 +119,7 @@ struct FMapGenerationParams
 	TArray<FEdgeAlignmentPair> EdgeMap;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-	TArray<USDTileDescriptor *> TileSet;
+	TArray<FTileDescriptor> TileSet;
 
 	FMapGenerationParams() { }
 };
@@ -87,7 +150,7 @@ public:
 	** tiles and their relationships.                                           */
 	/****************************************************************************/
 	UFUNCTION(BlueprintCallable, Category = "Levels")
-	void GenerateMapData(UPARAM(ref) TArray<USDTileDescriptor*> &TileList, FMapGenerationParams Params);
+	int GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileList, UPARAM(ref) TArray<FIntPair> &ActorLocations, FMapGenerationParams Params);
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevelActors(const TArray< TSubclassOf<AActor> > &LevelList, int MapTileCountX, int MapTileCountY);
@@ -100,4 +163,9 @@ public:
 private:
 	int32 GetListKeyByIndex(TDoubleLinkedList<int32> &List, int32 Index);
 	uint8 GetEdgeMapIndex(ProceduralTileEdges inEdge, TArray<FEdgeAlignmentPair> Map);
+
+	ProceduralTileEdges GetFacingEdge(int direction, FTileDescriptor* Desc);
+	void CopyDescriptorData(FTileDescriptor* CopyFrom, FTileDescriptor* CopyTo);
+	TArray<FTileDescriptor *> isValidForNeighbors(TArray<ProceduralTileEdges> neighbors, FTileDescriptor* TileToAdd, TArray<FEdgeAlignmentPair> & EdgeMap);
+	void constructEdgeMap(TArray<FEdgeAlignmentPair> &EdgeMap);
 };

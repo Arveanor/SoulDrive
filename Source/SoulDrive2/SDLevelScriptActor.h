@@ -20,11 +20,8 @@ public:
 // 	ASDLevelScriptActor();
 	ASDLevelScriptActor(const class FObjectInitializer& FOI);
 	UFUNCTION(BlueprintCallable, Category = "Levels")
-	void GenerateLevelFromStream();
+		void GenerateLevelFromStream();
 
-	UFUNCTION()
-	void GenerateMapData();
-	
 private:
 
  	UPROPERTY(BlueprintReadWrite, EditAnywhere, replicated, meta = (AllowPrivateAccess = "true"))
