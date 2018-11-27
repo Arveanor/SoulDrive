@@ -8,6 +8,10 @@
 #include "SoulDrive2GameModeBase.h"
 #include "List.h"
 
+#define stringify( name ) # name
+
+//UEnum* pEnum = FindObject<UEnum>(ANY_PACKAGE, TEXT(stringify(ProceduralTileEdges)), true);
+
 
 AActor* ASoulDrive2GameModeBase::ChoosePlayerStart_Implementation(AController* Player)
 {
@@ -35,6 +39,12 @@ AActor* ASoulDrive2GameModeBase::ChoosePlayerStart_Implementation(AController* P
 	}
 
 	return result;
+}
+
+ASoulDrive2GameModeBase::ASoulDrive2GameModeBase()
+{
+	static ConstructorHelpers::FObjectFinder<UDataTable> temp(TEXT("DataTable'/Game/SDContent/Levels/InstancedSMLevel/EdgeData_1.EdgeData_1'"));
+	EdgeMapData = temp.Object;
 }
 
 /*
@@ -167,7 +177,8 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 		index = IndexFromPoint(prevX, prevY, Params.TileCountX, Params.TileCountY);
 		if (index >= 0 && index < TileList.Num())
 		{
-			TileList[index] = *(candidateTiles.Array()[FMath::RandRange(0, candidateTiles.Num() - 1)]);
+			RandomIndex = FMath::RandRange(0, candidateTiles.Num() - 1);
+			TileList[index] = *(candidateTiles.Array()[RandomIndex]);
 			if (TileList[index].name == FName("Floor"))
 			{
 				openIndices.Add(index);
@@ -188,11 +199,9 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 	for (int actor : Params.ActorIds)
 	{
 		int i = FMath::FRandRange(0, openIndices.Num() - 1);
+		ActorLocations.Add(FIntPair(Params.ActorIds[actor], openIndices[i]));
 		openIndices.RemoveAt(i);
-
 	}
-
-	ActorLocations.Add(FIntPair(openIndices[0], 0));
 
 // 	for (int32 i : openIndices)
 // 	{
@@ -348,50 +357,21 @@ TArray<FTileDescriptor *> ASoulDrive2GameModeBase::isValidForNeighbors(TArray<Pr
 
 void ASoulDrive2GameModeBase::constructEdgeMap(TArray<FEdgeAlignmentPair>& EdgeMap)
 {
-	FEdgeAlignmentPair FirstPair;
-	FEdgeAlignmentPair SecondPair;
-	FEdgeAlignmentPair ThirdPair;
-	FEdgeAlignmentPair FourthPair;
-	FEdgeAlignmentPair FifthPair;
-	
-	TSet<ProceduralTileEdges> FirstValue;
-	TSet<ProceduralTileEdges> SecondValue;
-	TSet<ProceduralTileEdges> ThirdValue;
-	TSet<ProceduralTileEdges> FourthValue;
-	TSet<ProceduralTileEdges> FifthValue;
-
-	FirstValue.Add(ProceduralTileEdges::Hall_Open);
-	FirstPair.Key = ProceduralTileEdges::Hall_Door;
-	FirstPair.Value = FirstValue;
-
-	SecondValue.Add(ProceduralTileEdges::Hall_Door);
-	SecondValue.Add(ProceduralTileEdges::Hall_Open);
-	SecondValue.Add(ProceduralTileEdges::Hall_Side);
-	SecondValue.Add(ProceduralTileEdges::Wall_Mid);
-	SecondValue.Add(ProceduralTileEdges::Open);
-	SecondPair.Key = ProceduralTileEdges::Open;
-	SecondPair.Value = SecondValue;
-
-	ThirdValue.Add(ProceduralTileEdges::Hall_Open);
-	ThirdValue.Add(ProceduralTileEdges::Hall_Door);
-	ThirdPair.Key = ProceduralTileEdges::Hall_Open;
-	ThirdPair.Value = ThirdValue;
-
-	FourthValue.Add(ProceduralTileEdges::Open);
-	FourthValue.Add(ProceduralTileEdges::Wall_Mid);
-	FourthPair.Key = ProceduralTileEdges::Hall_Side;
-	FourthPair.Value = FourthValue;
-
-	FifthValue.Add(ProceduralTileEdges::Wall_Mid);
-	FifthValue.Add(ProceduralTileEdges::Hall_Side);
-	FifthValue.Add(ProceduralTileEdges::Open);
-	FifthPair.Key = ProceduralTileEdges::Wall_Mid;
-	FifthPair.Value = FifthValue;
-
-	EdgeMap.Add(FirstPair);
-	EdgeMap.Add(SecondPair);
-	EdgeMap.Add(ThirdPair);
-	EdgeMap.Add(FourthPair);
-	EdgeMap.Add(FifthPair);
-
+	if (EdgeMapData != nullptr)
+	{
+		TArray<FEdgeRelationshipTable*> OutAllRows;
+		FString Context;
+		EdgeMapData->GetAllRows<FEdgeRelationshipTable>(Context, OutAllRows);
+		FEdgeAlignmentPair NextPair;
+		for (FEdgeRelationshipTable* EdgeRow : OutAllRows)
+		{
+			if (EdgeRow->EdgeName != TEXT(stringify(NextPair.Key)))
+			{
+				EdgeMap.Add(NextPair);
+				NextPair.Key = GetEnumValueFromString<ProceduralTileEdges>(stringify(ProceduralTileEdges), EdgeRow->EdgeName.ToString());
+				NextPair.Value.Reset();
+			}
+			NextPair.Value.Add(GetEnumValueFromString<ProceduralTileEdges>(stringify(ProceduralTileEdges), EdgeRow->FriendName.ToString()));
+		}
+	}
 }

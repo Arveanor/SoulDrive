@@ -19,6 +19,19 @@ enum class ProceduralTileEdges : uint8 {
 };
 
 USTRUCT(BlueprintType)
+struct FEdgeRelationshipTable : public FTableRowBase {
+	GENERATED_BODY()
+	
+	UPROPERTY()
+	FName EdgeName;
+
+	UPROPERTY()
+	FName FriendName;
+
+	FEdgeRelationshipTable() {}
+};
+
+USTRUCT(BlueprintType)
 struct FIntPair {
 	GENERATED_BODY()
 	
@@ -138,6 +151,20 @@ class SOULDRIVE2_API ASoulDrive2GameModeBase : public AGameModeBase
 public:
 	TArray<AActor*> playerStartArray;
 
+	ASoulDrive2GameModeBase();
+
+
+	template <typename EnumType>
+	static FORCEINLINE EnumType GetEnumValueFromString(const FString& EnumName, const FString& String)
+	{
+		UEnum* Enum = FindObject<UEnum>(ANY_PACKAGE, *EnumName, true);
+		if (!Enum)
+		{
+			return EnumType(0);
+		}
+		return (EnumType)Enum->FindEnumIndex(FName(*String));
+	}
+
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevel(const TArray<FName> &SubLevels, int MapTileCountX, int MapTileCountY);
 
@@ -168,4 +195,6 @@ private:
 	void CopyDescriptorData(FTileDescriptor* CopyFrom, FTileDescriptor* CopyTo);
 	TArray<FTileDescriptor *> isValidForNeighbors(TArray<ProceduralTileEdges> neighbors, FTileDescriptor* TileToAdd, TArray<FEdgeAlignmentPair> & EdgeMap);
 	void constructEdgeMap(TArray<FEdgeAlignmentPair> &EdgeMap);
+
+	UDataTable* EdgeMapData;
 };
