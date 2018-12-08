@@ -7,7 +7,7 @@
 #include "SDBaseAiSpawner.generated.h"
 
 UCLASS()
-class SOULDRIVE2_API ASDBaseAiSpawner : public AActor, public ISDTeamIdentity
+class SOULDRIVE2_API ASDBaseAiSpawner : public AActor//, public ISDTeamIdentity
 {
 	GENERATED_BODY()
 	

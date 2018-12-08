@@ -19,6 +19,32 @@ enum class ProceduralTileEdges : uint8 {
 };
 
 USTRUCT(BlueprintType)
+struct FTileEdgesTable : public FTableRowBase {
+	GENERATED_BODY()
+	
+	UPROPERTY()
+	FName TileName;
+
+	UPROPERTY()
+	FName Edge1;
+
+	UPROPERTY()
+	FName Edge2;
+
+	UPROPERTY()
+	FName Edge3;
+
+	UPROPERTY()
+	FName Edge4;
+
+	UPROPERTY()
+	uint8 LocalId;
+
+	FTileEdgesTable() {}
+	
+};
+
+USTRUCT(BlueprintType)
 struct FEdgeRelationshipTable : public FTableRowBase {
 	GENERATED_BODY()
 	
@@ -132,7 +158,7 @@ struct FMapGenerationParams
 	TArray<FEdgeAlignmentPair> EdgeMap;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
-	TArray<FTileDescriptor> TileSet;
+	UDataTable* TileData;
 
 	FMapGenerationParams() { }
 };
@@ -165,6 +191,22 @@ public:
 		return (EnumType)Enum->FindEnumIndex(FName(*String));
 	}
 
+	template<typename TEnum>
+	static FORCEINLINE FString GetEnumValueAsString(const FString& Name, TEnum Value)
+	{
+		FString FullResult;
+		FString *JustEnum = new FString();
+		FString *EnumType = new FString();
+		const UEnum* enumPtr = FindObject<UEnum>(ANY_PACKAGE, *Name, true);
+		if (!enumPtr)
+		{
+			return FString("Invalid");
+		}
+		FullResult = enumPtr->GetNameByValue((int64)Value).ToString();
+		FullResult.Split("::", EnumType, JustEnum);
+		return *JustEnum;
+	}
+
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevel(const TArray<FName> &SubLevels, int MapTileCountX, int MapTileCountY);
 
@@ -189,12 +231,27 @@ public:
 	int IndexFromPoint(int x, int y, int maxX, int maxY);
 private:
 	int32 GetListKeyByIndex(TDoubleLinkedList<int32> &List, int32 Index);
+
+	/*
+	** Returns the index of inEdge in the Map
+	** inEdge: The ProceduralTileEdges member that is the key we are searching for in Map
+	** Map: A map of ProceduralTileEdges, TArray<ProceduralTileEdges> stored as a TArray of a struct for blueprint compatability (thanks epic)
+	*/
 	uint8 GetEdgeMapIndex(ProceduralTileEdges inEdge, TArray<FEdgeAlignmentPair> Map);
 
+	//Returns the Edge from Desc that faces direction, useful for figuring out where edges are for a rotated tile
 	ProceduralTileEdges GetFacingEdge(int direction, FTileDescriptor* Desc);
 	void CopyDescriptorData(FTileDescriptor* CopyFrom, FTileDescriptor* CopyTo);
+	/*
+	** Returns all valid rotations of TileToAdd in an array, should be called for every tile in a tile set on map generation
+	** neighbors: array of ProceduralTileEdges that will face the location we are picking a new tile for. Ordering of the edges must be
+	** Top, Right, Bottom, Left
+	** TileToAdd: The tile we want to check for validity of
+	** EdgeMap: A map of ProceduralTileEdges, TArray<ProceduralTileEdges> stored as a TArray of a struct for blueprint compatability (thanks epic)
+	*/
 	TArray<FTileDescriptor *> isValidForNeighbors(TArray<ProceduralTileEdges> neighbors, FTileDescriptor* TileToAdd, TArray<FEdgeAlignmentPair> & EdgeMap);
 	void constructEdgeMap(TArray<FEdgeAlignmentPair> &EdgeMap);
+	void constructTileSet(TArray<FTileDescriptor> &TileSet, UDataTable* TileData);
 
 	UDataTable* EdgeMapData;
 };

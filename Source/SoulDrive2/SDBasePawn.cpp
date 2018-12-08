@@ -54,7 +54,7 @@ float ASDBasePawn::TakeDamage(float Damage, FDamageEvent const & DamageEvent, AC
 	return 0.0f;
 }
 
-int ASDBasePawn::GetTeamId()
+int ASDBasePawn::GetTeamId_Implementation()
 {
 	return TeamId;
 }

@@ -56,7 +56,10 @@ void ASDBaseAoE::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * O
 	UE_LOG(LogTemp, Warning, TEXT("OnOverlapBegin entered for SDBaseAoE"));
 	if (OtherActor->Implements<ISDTeamIdentity::UClassType>() && ParentSpell != nullptr)
 	{
-		ParentSpell->HandleTarget(OtherActor, (ISDTeamIdentity::Execute_GetTeamId(OtherActor) == ParentSpell->GetTeamId()));
+		ISDTeamIdentity *IdActor = dynamic_cast<ISDTeamIdentity *>(OtherActor);
+		int otherId = IdActor->Execute_GetTeamId(OtherActor);
+		bool allied = otherId == ParentSpell->GetTeamId();
+		ParentSpell->HandleTarget(OtherActor, allied);
 	}
 	else
 	{
