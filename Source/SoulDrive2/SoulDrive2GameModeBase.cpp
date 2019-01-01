@@ -8,6 +8,10 @@
 #include "SoulDrive2GameModeBase.h"
 #include "List.h"
 
+#define stringify( name ) # name
+
+//UEnum* pEnum = FindObject<UEnum>(ANY_PACKAGE, TEXT(stringify(ProceduralTileEdges)), true);
+
 
 AActor* ASoulDrive2GameModeBase::ChoosePlayerStart_Implementation(AController* Player)
 {
@@ -37,17 +41,18 @@ AActor* ASoulDrive2GameModeBase::ChoosePlayerStart_Implementation(AController* P
 	return result;
 }
 
+ASoulDrive2GameModeBase::ASoulDrive2GameModeBase()
+{
+	static ConstructorHelpers::FObjectFinder<UDataTable> temp(TEXT("DataTable'/Game/SDContent/Levels/InstancedSMLevel/EdgeData_1.EdgeData_1'"));
+	EdgeMapData = temp.Object;
+}
+
 /*
 * This function will fill TileList with descriptors that can be used to load up a map.  TileList should be passed in as an empty TArray, and if not, it's contents will be ignored and overwritten.
 * Params contains all of the necessary data to guide the creation of the map data.
 */
 int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileList, UPARAM(ref) TArray<FIntPair> &ActorLocations, FMapGenerationParams Params)
 {
-	if (Params.TileSet.Num() < 1)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Cannot generate map, provided TileSet was empty. Exiting..."));
-		return -1;
-	}
 
 	if (Params.TileCountX < 1 || Params.TileCountY < 1)
 	{
@@ -60,16 +65,25 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 	** of the possible indices initially, and those elements will be removed when a needed tile is added on the second pass
 	*/
 	TArray<int> availableIndices;
+	TArray<FTileDescriptor> TileSet;
 	TArray<int> openIndices; // Places we can add actors
 	TSet<FTileDescriptor *> candidateTiles;
 	TArray<ProceduralTileEdges> neighborEdges;
-	TArray<FTileDescriptor *> neighborTiles;
+	TArray<FTileDescriptor *> neighborTiles;  // Should always be constructed as Top, Right, Bottom, Left for ordering
 	neighborEdges.SetNum(4);
 	neighborTiles.SetNum(4);
 	TileList.Init(FTileDescriptor(), Params.TileCountX * Params.TileCountY + 1);
 	availableIndices.SetNum(TileList.Num());
 	FTileDescriptor* TileToAdd;
 	
+	constructTileSet(TileSet, Params.TileData);
+
+	if (TileSet.Num() < 1)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Cannot generate map, provided TileSet was empty. Exiting..."));
+		return -1;
+	}
+
 	constructEdgeMap(Params.EdgeMap);
 	// Ok so until *after* we place a tile that is past the existing borders, we do not turn, that is why
 	// This is "previous" neighbors count, and not neighbors count. Please stop getting confused and changing it
@@ -115,7 +129,7 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 		}
 		else
 		{
-			neighborTiles[0] = &Params.TileSet[0];
+			neighborTiles[0] = &TileSet[0];
 		}
 		if ((index = IndexFromPoint(prevX + 1, prevY, Params.TileCountX, Params.TileCountY)) < TileList.Num() && index >= 0)
 		{
@@ -123,7 +137,7 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 		}
 		else
 		{
-			neighborTiles[1] = &Params.TileSet[0];
+			neighborTiles[1] = &TileSet[0];
 		}
 		if ((index = IndexFromPoint(prevX, prevY - 1, Params.TileCountX, Params.TileCountY)) < TileList.Num() && index >= 0)
 		{
@@ -131,7 +145,7 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 		}
 		else
 		{
-			neighborTiles[2] = &Params.TileSet[0];
+			neighborTiles[2] = &TileSet[0];
 		}
 		if ((index = IndexFromPoint(prevX - 1, prevY, Params.TileCountX, Params.TileCountY)) < TileList.Num() && index >= 0)
 		{
@@ -139,7 +153,7 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 		}
 		else
 		{
-			neighborTiles[3] = &Params.TileSet[0];
+			neighborTiles[3] = &TileSet[0];
 		}
 		for (int j = 0; j < 4; j++)
 		{
@@ -153,7 +167,7 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 
 		// Check every tile for this map for validity with our neighborEdges array, the ones that pass will be in a random roll to get chosen
 		candidateTiles.Reset();
-		for (FTileDescriptor Tile : Params.TileSet)
+		for (FTileDescriptor Tile : TileSet)
 		{
 			if (Tile.name != FName("EmptySpace"))
 			{
@@ -167,10 +181,18 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 		index = IndexFromPoint(prevX, prevY, Params.TileCountX, Params.TileCountY);
 		if (index >= 0 && index < TileList.Num())
 		{
-			TileList[index] = *(candidateTiles.Array()[FMath::RandRange(0, candidateTiles.Num() - 1)]);
-			if (TileList[index].name == FName("Floor"))
+			if (candidateTiles.Num() > 0)
 			{
-				openIndices.Add(index);
+				RandomIndex = FMath::RandRange(0, candidateTiles.Num() - 1);
+				TileList[index] = *(candidateTiles.Array()[RandomIndex]);
+				if (TileList[index].name == FName("Floor"))
+				{
+					openIndices.Add(index);
+				}
+			}
+			else
+			{
+				TileList[index] = FTileDescriptor();
 			}
 		}
 		else
@@ -188,11 +210,9 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 	for (int actor : Params.ActorIds)
 	{
 		int i = FMath::FRandRange(0, openIndices.Num() - 1);
+		ActorLocations.Add(FIntPair(Params.ActorIds[actor], openIndices[i]));
 		openIndices.RemoveAt(i);
-
 	}
-
-	ActorLocations.Add(FIntPair(openIndices[0], 0));
 
 // 	for (int32 i : openIndices)
 // 	{
@@ -331,7 +351,7 @@ TArray<FTileDescriptor *> ASoulDrive2GameModeBase::isValidForNeighbors(TArray<Pr
 		for (int j = 0; j < 4; j++)
 		{
 			Edge = GetFacingEdge(j * 90, NextPermutation);
-			index = GetEdgeMapIndex(Edge, EdgeMap);
+			index = GetEdgeMapIndex(neighbors[j], EdgeMap);
 			if (EdgeMap[index].Value.Contains(Edge))
 			{
 				acceptedEdgesCount++;
@@ -348,50 +368,49 @@ TArray<FTileDescriptor *> ASoulDrive2GameModeBase::isValidForNeighbors(TArray<Pr
 
 void ASoulDrive2GameModeBase::constructEdgeMap(TArray<FEdgeAlignmentPair>& EdgeMap)
 {
-	FEdgeAlignmentPair FirstPair;
-	FEdgeAlignmentPair SecondPair;
-	FEdgeAlignmentPair ThirdPair;
-	FEdgeAlignmentPair FourthPair;
-	FEdgeAlignmentPair FifthPair;
-	
-	TSet<ProceduralTileEdges> FirstValue;
-	TSet<ProceduralTileEdges> SecondValue;
-	TSet<ProceduralTileEdges> ThirdValue;
-	TSet<ProceduralTileEdges> FourthValue;
-	TSet<ProceduralTileEdges> FifthValue;
+	if (EdgeMapData != nullptr)
+	{
+		TArray<FEdgeRelationshipTable*> OutAllRows;
+		FString Context;
+		EdgeMapData->GetAllRows<FEdgeRelationshipTable>(Context, OutAllRows);
+		FEdgeAlignmentPair NextPair;
+		FName MyName;
+		for (FEdgeRelationshipTable* EdgeRow : OutAllRows)
+		{
+			MyName = FName(*GetEnumValueAsString<ProceduralTileEdges>(stringify(ProceduralTileEdges), NextPair.Key));
+			if (EdgeRow->EdgeName != FName(*GetEnumValueAsString<ProceduralTileEdges>(stringify(ProceduralTileEdges), NextPair.Key)))
+			{
+				if(MyName != FName("None"))
+					EdgeMap.Add(NextPair);
+				NextPair.Key = GetEnumValueFromString<ProceduralTileEdges>(stringify(ProceduralTileEdges), EdgeRow->EdgeName.ToString());
+				NextPair.Value.Reset();
+			}
+			NextPair.Value.Add(GetEnumValueFromString<ProceduralTileEdges>(stringify(ProceduralTileEdges), EdgeRow->FriendName.ToString()));
+		}
+		EdgeMap.Add(NextPair);
+	}
+}
 
-	FirstValue.Add(ProceduralTileEdges::Hall_Open);
-	FirstPair.Key = ProceduralTileEdges::Hall_Door;
-	FirstPair.Value = FirstValue;
+void ASoulDrive2GameModeBase::constructTileSet(TArray<FTileDescriptor> &TileSet, UDataTable* TileData)
+{
+	FTileDescriptor NextDesc;
+	if (TileData != nullptr)
+	{
+		TArray<FTileEdgesTable*> OutAllRows;
+		FString Context;
+		TileData->GetAllRows<FTileEdgesTable>(Context, OutAllRows);
 
-	SecondValue.Add(ProceduralTileEdges::Hall_Door);
-	SecondValue.Add(ProceduralTileEdges::Hall_Open);
-	SecondValue.Add(ProceduralTileEdges::Hall_Side);
-	SecondValue.Add(ProceduralTileEdges::Wall_Mid);
-	SecondValue.Add(ProceduralTileEdges::Open);
-	SecondPair.Key = ProceduralTileEdges::Open;
-	SecondPair.Value = SecondValue;
+		for (FTileEdgesTable* Table : OutAllRows)
+		{
+			NextDesc.TopEdge = GetEnumValueFromString<ProceduralTileEdges>(stringify(ProceduralTileEdges), Table->Edge1.ToString());
+			NextDesc.RightEdge = GetEnumValueFromString<ProceduralTileEdges>(stringify(ProceduralTileEdges), Table->Edge2.ToString());
+			NextDesc.BottomEdge = GetEnumValueFromString<ProceduralTileEdges>(stringify(ProceduralTileEdges), Table->Edge3.ToString());
+			NextDesc.LeftEdge = GetEnumValueFromString<ProceduralTileEdges>(stringify(ProceduralTileEdges), Table->Edge4.ToString());
 
-	ThirdValue.Add(ProceduralTileEdges::Hall_Open);
-	ThirdValue.Add(ProceduralTileEdges::Hall_Door);
-	ThirdPair.Key = ProceduralTileEdges::Hall_Open;
-	ThirdPair.Value = ThirdValue;
+			NextDesc.name = Table->TileName;
+			NextDesc.LocalId = Table->LocalId;
 
-	FourthValue.Add(ProceduralTileEdges::Open);
-	FourthValue.Add(ProceduralTileEdges::Wall_Mid);
-	FourthPair.Key = ProceduralTileEdges::Hall_Side;
-	FourthPair.Value = FourthValue;
-
-	FifthValue.Add(ProceduralTileEdges::Wall_Mid);
-	FifthValue.Add(ProceduralTileEdges::Hall_Side);
-	FifthValue.Add(ProceduralTileEdges::Open);
-	FifthPair.Key = ProceduralTileEdges::Wall_Mid;
-	FifthPair.Value = FifthValue;
-
-	EdgeMap.Add(FirstPair);
-	EdgeMap.Add(SecondPair);
-	EdgeMap.Add(ThirdPair);
-	EdgeMap.Add(FourthPair);
-	EdgeMap.Add(FifthPair);
-
+			TileSet.Add(NextDesc);
+		}
+	}
 }

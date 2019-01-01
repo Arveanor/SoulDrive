@@ -99,7 +99,7 @@ void ASDProjectile::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* 
 	UE_LOG(LogTemp, Warning, TEXT("OnOverlapBegin entered for SDProjectile"));
 	if (OtherActor->Implements<ISDTeamIdentity::UClassType>() && ParentSpell != nullptr)
 	{
-		ParentSpell->HandleTarget(OtherActor, (ISDTeamIdentity::Execute_GetTeamId(OtherActor) == ParentSpell->GetTeamId()));
+//		ParentSpell->HandleTarget(OtherActor, (ISDTeamIdentity::Execute_GetTeamId(OtherActor) == ParentSpell->GetTeamId()));
 	}
 	else
 	{

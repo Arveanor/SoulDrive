@@ -41,7 +41,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Team")
 	int TeamId;
 
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Team")
 	int GetTeamId();
+	virtual int GetTeamId_Implementation() override;
+
 	void SetTimeId(int InTeamId);
 
 	float GetHpRatio();
