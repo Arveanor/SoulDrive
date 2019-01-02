@@ -25,6 +25,9 @@ protected:
 
 	int MaxHp;
 	float CurrentHp;
+	int MaxMana;
+	float CurrentMana;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -48,4 +51,7 @@ public:
 	void SetTimeId(int InTeamId);
 
 	float GetHpRatio();
+	float GetManaRatio();
+	float GetCurrentMana();
+	void BurnMana(int amount);
 };

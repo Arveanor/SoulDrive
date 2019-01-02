@@ -2,6 +2,8 @@
 
 #include "SoulDrive2.h"
 #include "Net/UnrealNetwork.h"
+#include "SDNetPlayerPawn.h"
+#include "SDNetPlayerControllerProxy.h"
 #include "SDBaseSpell.h"
 
 
@@ -13,20 +15,23 @@ ASDBaseSpell::ASDBaseSpell(const class FObjectInitializer& FOI)
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	bAlwaysRelevant = true;
+	OnCooldown = false;
+	CooldownLength = 0.0f;
 }
 
 void ASDBaseSpell::Init(AController* OwnedBy)
 {
 	Caster = OwnedBy;
 	CasterCharacter = dynamic_cast<ACharacter *>(Caster->GetPawn());
-	spellTestInt = 112;
 }
 
 void ASDBaseSpell::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	DOREPLIFETIME(ASDBaseSpell, Caster);
 	DOREPLIFETIME(ASDBaseSpell, CasterCharacter);
-	DOREPLIFETIME(ASDBaseSpell, spellTestInt);
+	DOREPLIFETIME(ASDBaseSpell, CooldownLength);
+	DOREPLIFETIME(ASDBaseSpell, OnCooldown);
+	DOREPLIFETIME(ASDBaseSpell, TimerHandler);
 }
 
 // Called when the game starts or when spawned
@@ -34,6 +39,43 @@ void ASDBaseSpell::BeginPlay()
 {
 	Super::BeginPlay();
 	
+}
+
+void ASDBaseSpell::CooldownTimerCallback()
+{
+	OnCooldown = false;
+}
+
+bool ASDBaseSpell::PreCast()
+{
+	if (OnCooldown)
+		return false;
+
+	ASDNetPlayerPawn* SDCasterCharacter = dynamic_cast<ASDNetPlayerPawn *> (CasterCharacter);
+	ASDNetPlayerControllerProxy* SDCaster = dynamic_cast<ASDNetPlayerControllerProxy *> (Caster);
+	if (SDCaster != nullptr)
+		if (SDCaster->GetMainWeapon()->WeaponType != WeaponType)
+			return false;
+
+	if (ManaCost > 0)
+	{
+		if (SDCasterCharacter != nullptr)
+			if (SDCasterCharacter->GetCurrentMana() - ManaCost < 0)
+				return false;
+			else
+				SDCasterCharacter->BurnMana(ManaCost);
+	}
+	if (SDCasterCharacter != nullptr)
+	{
+		SDCasterCharacter->SetIsCasting(true);
+	}
+	Caster->StopMovement();
+	if (CooldownLength > 0.0f)
+	{
+		GetWorld()->GetTimerManager().SetTimer(TimerHandler, this, &ASDBaseSpell::CooldownTimerCallback, CooldownLength, false, -1.0f);
+		OnCooldown = true;
+	}
+	return true;
 }
 
 // Called every frame
@@ -71,4 +113,9 @@ void ASDBaseSpell::SetTeamId(int InTeamId)
 int ASDBaseSpell::GetTeamId()
 {
 	return TeamId;
+}
+
+bool ASDBaseSpell::isOnCooldown()
+{
+	return OnCooldown;
 }

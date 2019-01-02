@@ -6,6 +6,7 @@
 #include "SDFireBoltSpell.h"
 #include "SDCelestialFragmentSpell.h"
 #include "SDSunBurstSpell.h"
+#include "SDSlash.h"
 #include "SDNetPlayerControllerProxy.h"
 
 
@@ -32,6 +33,7 @@ void ASDNetPlayerControllerProxy::CastSpell(ASDBaseSpell *SpellToCast)
 		if (ServerController != nullptr)
 		{
 			SpellToCast->Init(ServerController);
+			SpellToCast->SetTeamId(1);
 			SpellToCast->CastSpell(TargetLocation);
 		}
 	}
@@ -91,6 +93,8 @@ void ASDNetPlayerControllerProxy::SetupInputComponent()
 
 	InputComponent->BindAction("SpellSlot1", IE_Pressed, this, &ASDNetPlayerControllerProxy::OnSpellSlot1Pressed);
 	InputComponent->BindAction("SpellSlot1", IE_Released, this, &ASDNetPlayerControllerProxy::OnSpellSlot1Released);
+
+	InputComponent->BindAction("SpellSlot2", IE_Pressed, this, &ASDNetPlayerControllerProxy::OnSpellSlot2Pressed);
 
 	InputComponent->BindAction("LaunchMpMenu", IE_Pressed, this, &ASDNetPlayerControllerProxy::OnLaunchMpMenu);
 	InputComponent->BindAction("LaunchMpMenu", IE_Released, this, &ASDNetPlayerControllerProxy::OnCloseMpMenu);
@@ -162,6 +166,7 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 		SpawnInfo.Instigator = GetPawn();
 		SpellSlot0 = GetWorld()->SpawnActor<ASDCelestialFragmentSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
 		SpellSlot1 = GetWorld()->SpawnActor<ASDFireBoltSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
+		SpellSlot2 = GetWorld()->SpawnActor<ASDSlash>(FVector(0.f, 0.f, 0.f), FRotator(0.f, 0.f, 0.f), SpawnInfo);
 		ASDCheatSpell* ChildRef = dynamic_cast<ASDCheatSpell*>(SpellSlot0);
 
 		if (ServerController == nullptr && PlayerProxy != nullptr)
@@ -208,12 +213,10 @@ void ASDNetPlayerControllerProxy::OnSpellSlot0Pressed()
 		{
 			ServerController = PlayerProxy->GetServerController();
 		}
-// 		if (ServerController != nullptr)
-// 		{
-// 			if(AsCheatSpell != nullptr) AsCheatSpell->Init(ServerController);
+
 		SpellSlot0->Init(ServerController);
-			SpellSlot0->CastSpell(TargetLocation);
-/*		}*/
+		SpellSlot0->SetTeamId(1);
+		SpellSlot0->CastSpell(TargetLocation);
 	}
 	else
 	{
@@ -253,6 +256,11 @@ void ASDNetPlayerControllerProxy::MoveToLocation_Implementation(FVector target)
 void ASDNetPlayerControllerProxy::OnSpellSlot1Released()
 {
 
+}
+
+void ASDNetPlayerControllerProxy::OnSpellSlot2Pressed()
+{
+	CastSpell(SpellSlot2);
 }
 
 bool ASDNetPlayerControllerProxy::MoveToLocation_Validate(FVector target)
@@ -436,6 +444,25 @@ void ASDNetPlayerControllerProxy::HandleLevelLoaded()
 
 }
 
+FTimerHandle ASDNetPlayerControllerProxy::GetSpellTimer(uint8 SpellSlot)
+{
+	switch(SpellSlot)
+	{
+		case 0:
+			return SpellSlot0->TimerHandler;
+			break;
+		case 1:
+			return SpellSlot1->TimerHandler;
+			break;
+		case 2:
+			return SpellSlot2->TimerHandler;
+			break;
+		default:
+			//UE_LOG(LogTemp, ERROR, TEXT("Unable to retrieve spell timer from spellslot %d"), SpellSlot);
+			return SpellSlot0->TimerHandler;
+	}
+}
+
 void ASDNetPlayerControllerProxy::PickupItem(const ASDBaseEquipment &PickedUpItem)
 {
 	
@@ -485,12 +512,17 @@ void ASDNetPlayerControllerProxy::SwapWeapons()
 	ServerCharacter->SwapWeapons();
 }
 
-void ASDNetPlayerControllerProxy::SetAltWeapon(ASDBaseEquipment * Weapon, bool bMainHand)
+void ASDNetPlayerControllerProxy::SetAltWeapon(ASDBaseWeapon * Weapon, bool bMainHand)
 {
 	AltWeapons[bMainHand ? 0 : 1] = Weapon;
 }
 
-void ASDNetPlayerControllerProxy::SetMainWeapon(ASDBaseEquipment *Weapon, bool bMainHand)
+void ASDNetPlayerControllerProxy::SetMainWeapon(ASDBaseWeapon *Weapon, bool bMainHand)
 {
 	MainWeapons[bMainHand ? 0 : 1] = Weapon;
+}
+
+ASDBaseWeapon* ASDNetPlayerControllerProxy::GetMainWeapon()
+{
+	return MainWeapons[0];
 }

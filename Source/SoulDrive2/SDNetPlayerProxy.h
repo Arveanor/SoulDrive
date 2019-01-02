@@ -65,6 +65,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PlayerStats")
 	float GetDisplayHealth();
 
+	UFUNCTION(BlueprintCallable, Category = "PlayerStats")
+	float GetDisplayMana();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
 	TSubclassOf<ASDNetPlayerPawn> NetCharacterClass;
 

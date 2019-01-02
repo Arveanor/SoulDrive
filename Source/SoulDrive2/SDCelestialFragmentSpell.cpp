@@ -20,7 +20,6 @@ void ASDCelestialFragmentSpell::Init(AController * OwnedBy)
 {
 	Caster = OwnedBy;
 	CasterCharacter = dynamic_cast<ACharacter *>(Caster->GetPawn());
-	spellTestInt = 113;
 }
 
 void ASDCelestialFragmentSpell::HandleTarget(AActor *Target, bool IsAlly)
@@ -39,6 +38,8 @@ void ASDCelestialFragmentSpell::HandleTarget(AActor *Target, bool IsAlly)
 void ASDCelestialFragmentSpell::BeginPlay()
 {
 	Super::BeginPlay();
+	OnCooldown = false;
+	WeaponType = WeaponRequirements::AnyWeapon;
 }
 
 void ASDCelestialFragmentSpell::CastSpell(FVector target)

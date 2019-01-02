@@ -21,7 +21,9 @@ void ASDNetPlayerPawn::BeginPlay()
 		}
 	}
 	MaxHp = 100;
+	MaxMana = 100;
 	CurrentHp = (float)MaxHp;
+	CurrentMana = (float)MaxMana;
 	TeamId = 1;
 }
 

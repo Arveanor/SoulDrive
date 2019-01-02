@@ -7,6 +7,13 @@
 /**
  * 
  */
+UENUM(BlueprintType)
+enum class WeaponRequirements : uint8 {
+	MeleeOnly,
+	RangedOnly,
+	AnyWeapon
+};
+
 class SOULDRIVE2_API SDConstants
 {
 public:

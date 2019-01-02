@@ -5,37 +5,6 @@
 #include "SDProjectile.h"
 
 
-// Sets default values
-// ASDProjectile::ASDProjectile()
-// {
-//  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-// 	PrimaryActorTick.bCanEverTick = true;
-// 
-// 	bReplicates = true;
-// 
-// 	ParticleComp = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particles"));
-// 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
-// 
-// 	static ConstructorHelpers::FObjectFinder<UParticleSystem> ParticleSys(TEXT("ParticleSystem'/Game/SDContent/VFX/Fireball/PFX_Fireball_Sparks_01.PFX_Fireball_Sparks_01'"));
-// 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ProjMesh(TEXT("'/Engine/BasicShapes/Plane.Plane'"));
-// 	static ConstructorHelpers::FObjectFinder<UMaterialInstance> MatInst(TEXT("MaterialInstanceConstant'/Game/SDContent/VFX/Fireball/MAT_Fireball_01_Inst.MAT_Fireball_01_Inst'"));
-// 
-// 	Material = (UMaterialInstance*)MatInst.Object;
-// 	ParticleComp->SetTemplate(ParticleSys.Object);
-// 	MeshComp->SetStaticMesh(ProjMesh.Object);
-// 	ParticleComp->SetupAttachment(MeshComp);
-// 	RootComponent = MeshComp;
-// 
-// //	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-// 	MeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
-// 
-// 	Material_Dyn = UMaterialInstanceDynamic::Create(Material, MeshComp);
-// 	MeshComp->SetMaterial(0, Material_Dyn);
-// 
-// 	MeshComp->OnComponentBeginOverlap.AddDynamic(this, &ASDProjectile::OnOverlapBegin);
-// }
-
-
 ASDProjectile::ASDProjectile(const class FObjectInitializer& FOI)
 	: Super(FOI)
 {
@@ -99,7 +68,7 @@ void ASDProjectile::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* 
 	UE_LOG(LogTemp, Warning, TEXT("OnOverlapBegin entered for SDProjectile"));
 	if (OtherActor->Implements<ISDTeamIdentity::UClassType>() && ParentSpell != nullptr)
 	{
-//		ParentSpell->HandleTarget(OtherActor, (ISDTeamIdentity::Execute_GetTeamId(OtherActor) == ParentSpell->GetTeamId()));
+		ParentSpell->HandleTarget(OtherActor, (ISDTeamIdentity::Execute_GetTeamId(OtherActor) == ParentSpell->GetTeamId()));
 	}
 	else
 	{

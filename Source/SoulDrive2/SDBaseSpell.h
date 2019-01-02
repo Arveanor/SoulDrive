@@ -4,6 +4,7 @@
 
 #include "GameFramework/Actor.h"
 #include "SDBasePawn.h"
+#include "SDConstants.h"
 #include "SDBaseSpell.generated.h"
 
 UCLASS()
@@ -21,14 +22,22 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	UFUNCTION()
+	void CooldownTimerCallback();
+
+	//Used to queue up cast animations and interrupt movement
+	virtual bool PreCast();
+	UPROPERTY(replicated)
+	bool OnCooldown;
+	UPROPERTY(replicated)
+	float CooldownLength;
 	UPROPERTY(replicated)
 	AController* Caster;
 	UPROPERTY(replicated)
 	ACharacter* CasterCharacter;
-	UPROPERTY(replicated)
-	int spellTestInt;
-	int TeamId;
 
+	int ManaCost;
+	int TeamId;
 
 public:	
 	// Called every frame
@@ -40,4 +49,9 @@ public:
 
 	void SetTeamId(int InTeamId);
 	int GetTeamId();
+	bool isOnCooldown();
+	WeaponRequirements WeaponType;
+
+	UPROPERTY(replicated, BlueprintReadWrite, EditAnywhere, Category = "cooldown")
+	FTimerHandle TimerHandler;
 };

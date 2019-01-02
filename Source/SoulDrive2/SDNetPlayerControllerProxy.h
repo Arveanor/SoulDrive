@@ -5,8 +5,8 @@
 #include "GameFramework/PlayerController.h"
 #include "SDNetPlayerController.h"
 #include "Blueprint/UserWidget.h"
-//#include "SDNetPlayerPawn.h"
 #include "SDNetPlayerProxy.h"
+#include "SDBaseWeapon.h"
 #include "SDBaseEquipment.h"
 #include "SDConstants.h"
 #include "SDBaseSpell.h"
@@ -32,6 +32,7 @@ protected:
 	void OnSpellSlot0Released();
 	void OnSpellSlot1Pressed();
 	void OnSpellSlot1Released();
+	void OnSpellSlot2Pressed();
 
 	/* Stores actions to be executed when the player has control again */
 	TQueue<void (ASDNetPlayerControllerProxy::*)(FVector)> InputQueue;
@@ -104,13 +105,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Levels")
 	void HandleLevelLoaded();
 
+	UFUNCTION(BlueprintCallable, Category = "Spells")
+	FTimerHandle GetSpellTimer(uint8 SpellSlot);
+
 	void PickupItem(const ASDBaseEquipment &PickedUpItem);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void SetMainWeapon(ASDBaseEquipment *Weapon, bool bMainHand);
+	void SetMainWeapon(ASDBaseWeapon *Weapon, bool bMainHand);
+
+	ASDBaseWeapon* GetMainWeapon();
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void SetAltWeapon(ASDBaseEquipment *Weapon, bool bMainHand);
+	void SetAltWeapon(ASDBaseWeapon *Weapon, bool bMainHand);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerGameMenu;
@@ -162,8 +168,8 @@ private:
 	ASDBaseSpell* SpellSlot2;
 	ASDBaseSpell* SpellSlot3;
 
-	TArray<ASDBaseEquipment *> MainWeapons;
-	TArray<ASDBaseEquipment *> AltWeapons;
-	TArray<ASDBaseEquipment*>* CurrentWeaponSet;
+	TArray<ASDBaseWeapon *> MainWeapons;
+	TArray<ASDBaseWeapon *> AltWeapons;
+	TArray<ASDBaseWeapon*>* CurrentWeaponSet;
 
 };

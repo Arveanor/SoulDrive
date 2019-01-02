@@ -138,6 +138,18 @@ float ASDNetPlayerProxy::GetDisplayHealth()
 	}
 }
 
+float ASDNetPlayerProxy::GetDisplayMana()
+{
+	if (ServerCharacter != nullptr)
+	{
+		return ServerCharacter->GetManaRatio();
+	}
+	else
+	{
+		return 0.0f;
+	}
+}
+
 ASDNetPlayerController * ASDNetPlayerProxy::GetServerController()
 {
 	return ServerController;

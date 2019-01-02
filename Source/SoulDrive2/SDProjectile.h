@@ -12,8 +12,7 @@ class SOULDRIVE2_API ASDProjectile : public APawn
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this pawn's properties
-//	ASDProjectile();
+
 	ASDProjectile(const class FObjectInitializer& FOI);
 	void Init(FString MeshName, float Velocity, UMaterialInterface *Mat);
 

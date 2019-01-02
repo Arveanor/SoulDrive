@@ -12,6 +12,8 @@ ASDBaseAICharacter::ASDBaseAICharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	AIControllerClass = ASDBaseAIController::StaticClass();
 	SunburstCooldown = 1.5f;
+	CurrentHp = 19;
+	MaxHp = 19;
 	this->TeamId = 7;
 }
 
@@ -43,7 +45,11 @@ void ASDBaseAICharacter::BeginPlay()
 
 float ASDBaseAICharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	this->Destroy();
+	CurrentHp -= Damage;
+	if (CurrentHp <= 0)
+	{
+		this->Destroy();
+	}
 	return 0.0f;
 }
 

@@ -68,3 +68,18 @@ float ASDBasePawn::GetHpRatio()
 {
 	return CurrentHp / MaxHp;
 }
+
+float ASDBasePawn::GetManaRatio()
+{
+	return CurrentMana / MaxMana;
+}
+
+float ASDBasePawn::GetCurrentMana()
+{
+	return CurrentMana;
+}
+
+void ASDBasePawn::BurnMana(int amount)
+{
+	CurrentMana -= amount;
+}

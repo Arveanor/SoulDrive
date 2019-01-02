@@ -34,7 +34,7 @@ ASDBaseAoE::ASDBaseAoE()
 void ASDBaseAoE::BeginPlay()
 {
 	Super::BeginPlay();
-	GetWorld()->GetTimerManager().SetTimer(TimerHandler, this, &ASDBaseAoE::OnPrimed, .5f, false, 1.5f);
+	GetWorld()->GetTimerManager().SetTimer(TimerHandler, this, &ASDBaseAoE::OnPrimed, .35f, false, -1.0f);
  	SetActorTickEnabled(false);
  	SetActorEnableCollision(false);
 	ParticleComp->DeactivateSystem();

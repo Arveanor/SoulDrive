@@ -207,7 +207,7 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 		availableIndices[i] = i;
 	}
 
-	for (int actor : Params.ActorIds)
+	for (int actor = 0; actor < Params.ActorIds.Num(); actor++)
 	{
 		int i = FMath::FRandRange(0, openIndices.Num() - 1);
 		ActorLocations.Add(FIntPair(Params.ActorIds[actor], openIndices[i]));
