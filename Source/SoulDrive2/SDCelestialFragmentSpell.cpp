@@ -16,12 +16,6 @@ ASDCelestialFragmentSpell::ASDCelestialFragmentSpell(const class FObjectInitiali
 	ProjectileSpeed = 200.f;
 }
 
-void ASDCelestialFragmentSpell::Init(AController * OwnedBy)
-{
-	Caster = OwnedBy;
-	CasterCharacter = dynamic_cast<ACharacter *>(Caster->GetPawn());
-}
-
 void ASDCelestialFragmentSpell::HandleTarget(AActor *Target, bool IsAlly)
 {
 	const FDamageEvent DamageEvent;

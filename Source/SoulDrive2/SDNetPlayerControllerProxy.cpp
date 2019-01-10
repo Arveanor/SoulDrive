@@ -32,7 +32,7 @@ void ASDNetPlayerControllerProxy::CastSpell(ASDBaseSpell *SpellToCast)
 		}
 		if (ServerController != nullptr)
 		{
-			SpellToCast->Init(ServerController);
+			SpellToCast->Init(dynamic_cast<APawn *> (GetPawn()));
 			SpellToCast->SetTeamId(1);
 			SpellToCast->CastSpell(TargetLocation);
 		}
@@ -48,9 +48,6 @@ ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
 	MpMenuCanBeOpened = true;
 	OverwritableAction = SDConstants::HotKeyOverrides::NO_ACTION_WRITABLE;
 	StandardInput.SetHideCursorDuringCapture(false);
-	MainWeapons.SetNumZeroed(2, true);
-	AltWeapons.SetNumZeroed(2, true);
-	CurrentWeaponSet = &MainWeapons;
 
 }
 
@@ -174,11 +171,11 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 			UE_LOG(LogTemp, Warning, TEXT("Getting ServerController from Pawn Proxy"));
 			ServerController = PlayerProxy->GetServerController();
 		}
-		if (ChildRef != nullptr && ServerController != nullptr)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Initializing SpellSlot0"));
-			ChildRef->Init(ServerController);
-		}
+// 		if (ChildRef != nullptr && ServerController != nullptr)
+// 		{
+// 			UE_LOG(LogTemp, Warning, TEXT("Initializing SpellSlot0"));
+// 			ChildRef->Init(ServerController);
+// 		}
 		else
 		{
 			if (ChildRef == nullptr) UE_LOG(LogTemp, Warning, TEXT("dynamic cast failed!"));
@@ -208,13 +205,12 @@ void ASDNetPlayerControllerProxy::OnSpellSlot0Pressed()
 		{
 			TargetLocation = Hit.Location;
 		}
-		ASDCheatSpell *AsCheatSpell = dynamic_cast<ASDCheatSpell *>(SpellSlot0);
 		if (ServerController == nullptr)
 		{
 			ServerController = PlayerProxy->GetServerController();
 		}
 
-		SpellSlot0->Init(ServerController);
+		SpellSlot0->Init(dynamic_cast<APawn *> (GetPawn()));
 		SpellSlot0->SetTeamId(1);
 		SpellSlot0->CastSpell(TargetLocation);
 	}
@@ -463,11 +459,6 @@ FTimerHandle ASDNetPlayerControllerProxy::GetSpellTimer(uint8 SpellSlot)
 	}
 }
 
-void ASDNetPlayerControllerProxy::PickupItem(const ASDBaseEquipment &PickedUpItem)
-{
-	
-}
-
 void ASDNetPlayerControllerProxy::OnClosePlayerMenu()
 {
 	SetHotkeyMenuCanBeOpened(true);
@@ -510,19 +501,4 @@ void ASDNetPlayerControllerProxy::SwapWeapons()
 		ServerCharacter = PlayerProxy->GetServerCharacter();
 	}
 	ServerCharacter->SwapWeapons();
-}
-
-void ASDNetPlayerControllerProxy::SetAltWeapon(ASDBaseWeapon * Weapon, bool bMainHand)
-{
-	AltWeapons[bMainHand ? 0 : 1] = Weapon;
-}
-
-void ASDNetPlayerControllerProxy::SetMainWeapon(ASDBaseWeapon *Weapon, bool bMainHand)
-{
-	MainWeapons[bMainHand ? 0 : 1] = Weapon;
-}
-
-ASDBaseWeapon* ASDNetPlayerControllerProxy::GetMainWeapon()
-{
-	return MainWeapons[0];
 }

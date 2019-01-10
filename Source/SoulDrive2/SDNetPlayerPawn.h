@@ -4,6 +4,7 @@
 
 #include "SDBasePawn.h"
 #include "SDBaseEquipment.h"
+#include "SDBaseWeapon.h"
 #include "UnrealNetwork.h"
 //#include "SDNetPlayerControllerProxy.h"
 #include "SDNetPlayerPawn.generated.h"
@@ -48,18 +49,24 @@ public:
 	void OnHitDetected(UPrimitiveComponent *OverlappedComp, AActor *OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& SweepResult);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void SetMainWeapon(ASDBaseEquipment *Weapon, bool bMainHand);
+	void SetMainWeapon(ASDBaseWeapon *Weapon, bool bMainHand);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void SetAltWeapon(ASDBaseEquipment *Weapon, bool bMainHand);
+	void SetAltWeapon(ASDBaseWeapon *Weapon, bool bMainHand);
 
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	void SetIsCasting(bool isCasting);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool UnequipItem(ASDBaseEquipment *TargetItem);
 
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	bool IsCasting();
 
 	void SwapWeapons();
+
+	ASDBaseWeapon* GetMainWeapon();
+	ASDBaseWeapon* GetAltWeapon();
 
 	TArray<ASDBaseEquipment *> *CarriedItems;
 
@@ -68,7 +75,7 @@ public:
 private:
 
 	bool IsSpellCasting;
-	TArray<ASDBaseEquipment *> MainWeapons;
-	TArray<ASDBaseEquipment *> AltWeapons;
-	TArray<ASDBaseEquipment*>* CurrentWeaponSet;
+	TArray<ASDBaseWeapon *> MainWeapons;
+	TArray<ASDBaseWeapon *> AltWeapons;
+	TArray<ASDBaseWeapon*>* CurrentWeaponSet;
 };

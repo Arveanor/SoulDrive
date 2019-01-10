@@ -15,7 +15,7 @@ class SOULDRIVE2_API ASDBaseWeapon : public ASDBaseEquipment
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	WeaponRequirements WeaponType;
 	int DamageLow;
 	int DamageHigh;

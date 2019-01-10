@@ -9,7 +9,10 @@ void ASDSlash::CastSpell(FVector target)
 {
 	if (Caster != nullptr)
 	{
-		PreCast();
+		if (!PreCast())
+		{
+			return;
+		}
 		TArray<TWeakObjectPtr<AActor>> AlreadyHitPawns;
 		FVector PlayerLocation = Caster->GetPawn()->GetActorLocation();
 		FVector LookAtVector;

@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "SDBasePawn.h"
 #include "SDConstants.h"
+#include "SDNetPlayerProxy.h"
 #include "SDBaseSpell.generated.h"
 
 UCLASS()
@@ -16,7 +17,7 @@ public:
 	// Sets default values for this actor's properties
 	ASDBaseSpell(const class FObjectInitializer& FOI);
 
-	virtual void Init(AController* OwnedBy);
+	virtual void Init(APawn* OwnedBy);
 
 protected:
 	// Called when the game starts or when spawned
@@ -35,6 +36,8 @@ protected:
 	AController* Caster;
 	UPROPERTY(replicated)
 	ACharacter* CasterCharacter;
+	UPROPERTY(replicated)
+	ASDNetPlayerProxy* ProxyPawn;
 
 	int ManaCost;
 	int TeamId;

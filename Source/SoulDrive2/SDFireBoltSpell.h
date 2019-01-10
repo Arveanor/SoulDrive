@@ -16,8 +16,6 @@ class SOULDRIVE2_API ASDFireBoltSpell : public ASDBaseSpell
 public:
 	ASDFireBoltSpell(const class FObjectInitializer& FOI);
 
-	void Init(AController* OwnedBy) override;
-
 	UPROPERTY(EditAnywhere, Category = "Projectile")
 	UMaterial *ProjectileMat;
 

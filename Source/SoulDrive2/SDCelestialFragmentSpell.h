@@ -16,8 +16,6 @@ class SOULDRIVE2_API ASDCelestialFragmentSpell : public ASDBaseSpell
 public:
 	ASDCelestialFragmentSpell(const class FObjectInitializer& FOI);
 	
-	void Init(AController* OwnedBy) override;
-
 	UPROPERTY(EditAnywhere, Category = "Projectile")
 	UMaterial *ProjectileMat;
 

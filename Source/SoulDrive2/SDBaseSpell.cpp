@@ -19,10 +19,21 @@ ASDBaseSpell::ASDBaseSpell(const class FObjectInitializer& FOI)
 	CooldownLength = 0.0f;
 }
 
-void ASDBaseSpell::Init(AController* OwnedBy)
+void ASDBaseSpell::Init(APawn* OwnedBy)
 {
-	Caster = OwnedBy;
-	CasterCharacter = dynamic_cast<ACharacter *>(Caster->GetPawn());
+	if (OwnedBy == nullptr)
+		UE_LOG(LogTemp, Error, TEXT("In Base Spell Init, given pawn was null"));
+	ProxyPawn = dynamic_cast<ASDNetPlayerProxy *> (OwnedBy);
+	if (ProxyPawn != nullptr)
+	{
+		Caster = ProxyPawn->GetServerController();
+		CasterCharacter = ProxyPawn->GetServerCharacter();
+	}
+	else
+	{
+		Caster = OwnedBy->GetController();
+		CasterCharacter = dynamic_cast<ACharacter *> (OwnedBy);
+	}
 }
 
 void ASDBaseSpell::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -32,6 +43,7 @@ void ASDBaseSpell::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ASDBaseSpell, CooldownLength);
 	DOREPLIFETIME(ASDBaseSpell, OnCooldown);
 	DOREPLIFETIME(ASDBaseSpell, TimerHandler);
+	DOREPLIFETIME(ASDBaseSpell, ProxyPawn);
 }
 
 // Called when the game starts or when spawned
@@ -52,10 +64,22 @@ bool ASDBaseSpell::PreCast()
 		return false;
 
 	ASDNetPlayerPawn* SDCasterCharacter = dynamic_cast<ASDNetPlayerPawn *> (CasterCharacter);
-	ASDNetPlayerControllerProxy* SDCaster = dynamic_cast<ASDNetPlayerControllerProxy *> (Caster);
-	if (SDCaster != nullptr)
-		if (SDCaster->GetMainWeapon()->WeaponType != WeaponType)
+	ASDNetPlayerControllerProxy* SDCaster = dynamic_cast<ASDNetPlayerControllerProxy *> (ProxyPawn->GetController());
+	if (SDCasterCharacter != nullptr)
+	{
+		if (SDCasterCharacter->GetMainWeapon() == nullptr)
+		{
+			if (WeaponType != WeaponRequirements::MeleeOnly && WeaponType != WeaponRequirements::AnyWeapon)
+			{
+				return false;
+			}
+		}
+		else if (SDCasterCharacter->GetMainWeapon()->WeaponType != WeaponType && WeaponType != WeaponRequirements::AnyWeapon)
+		{
 			return false;
+		}
+	}
+
 
 	if (ManaCost > 0)
 	{

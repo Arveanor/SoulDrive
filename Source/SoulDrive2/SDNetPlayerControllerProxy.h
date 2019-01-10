@@ -108,16 +108,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Spells")
 	FTimerHandle GetSpellTimer(uint8 SpellSlot);
 
-	void PickupItem(const ASDBaseEquipment &PickedUpItem);
-
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void SetMainWeapon(ASDBaseWeapon *Weapon, bool bMainHand);
-
-	ASDBaseWeapon* GetMainWeapon();
-
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void SetAltWeapon(ASDBaseWeapon *Weapon, bool bMainHand);
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerGameMenu;
 
@@ -167,9 +157,5 @@ private:
 	ASDBaseSpell* SpellSlot1;
 	ASDBaseSpell* SpellSlot2;
 	ASDBaseSpell* SpellSlot3;
-
-	TArray<ASDBaseWeapon *> MainWeapons;
-	TArray<ASDBaseWeapon *> AltWeapons;
-	TArray<ASDBaseWeapon*>* CurrentWeaponSet;
 
 };

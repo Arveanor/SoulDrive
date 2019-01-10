@@ -88,7 +88,7 @@ void ASDNetPlayerPawn::EquipItem(ASDBaseEquipment *Item, uint8 Slot)
 			{
 				SwapWeapons();
 			}
-			SetMainWeapon(Item, true);
+			SetMainWeapon(dynamic_cast<ASDBaseWeapon*> (Item), true);
 			SocketName = TEXT("Hand_R_endSocket");
 			break;
 		case(EEquipSlot::AltWeaponMainHand):
@@ -96,7 +96,7 @@ void ASDNetPlayerPawn::EquipItem(ASDBaseEquipment *Item, uint8 Slot)
 			{
 				SwapWeapons();
 			}
-			SetAltWeapon(Item, true);
+			SetAltWeapon(dynamic_cast<ASDBaseWeapon*> (Item), true);
 			SocketName = TEXT("Hand_R_endSocket");
 			break;
 		case(EEquipSlot::Shoulder):
@@ -163,7 +163,17 @@ void ASDNetPlayerPawn::SwapWeapons()
 	}
 }
 
-void ASDNetPlayerPawn::SetAltWeapon(ASDBaseEquipment * Weapon, bool bMainHand)
+ASDBaseWeapon* ASDNetPlayerPawn::GetMainWeapon()
+{
+	return MainWeapons[0];
+}
+
+ASDBaseWeapon* ASDNetPlayerPawn::GetAltWeapon()
+{
+	return AltWeapons[0];
+}
+
+void ASDNetPlayerPawn::SetAltWeapon(ASDBaseWeapon * Weapon, bool bMainHand)
 {
 	AltWeapons[bMainHand ? 0 : 1] = Weapon;
 }
@@ -173,7 +183,32 @@ void ASDNetPlayerPawn::SetIsCasting(bool isCasting)
 	IsSpellCasting = isCasting;
 }
 
-void ASDNetPlayerPawn::SetMainWeapon(ASDBaseEquipment *Weapon, bool bMainHand)
+bool ASDNetPlayerPawn::UnequipItem(ASDBaseEquipment *TargetItem)
+{
+	bool success = false;
+	switch (TargetItem->IType)
+	{
+	case (EItemType::Weapon):
+		ASDBaseWeapon *Weapon = dynamic_cast<ASDBaseWeapon *>(TargetItem);
+		if (nullptr != Weapon)
+		{
+			if (MainWeapons.Contains(Weapon))
+			{
+				MainWeapons.Remove(Weapon);
+				success = true;
+			}
+			if (AltWeapons.Contains(Weapon))
+			{
+				AltWeapons.Remove(Weapon);
+				success = true;
+			}
+		}
+		break;
+	}
+	return success;
+}
+
+void ASDNetPlayerPawn::SetMainWeapon(ASDBaseWeapon *Weapon, bool bMainHand)
 {
 	MainWeapons[bMainHand ? 0 : 1] = Weapon;
 }

@@ -17,11 +17,6 @@ void ASDCheatSpell::BeginPlay()
 }
 
 
-void ASDCheatSpell::Init(AController* OwnedBy)
-{
-	Caster = OwnedBy;
-}
-
 void ASDCheatSpell::CastSpell(FVector target)
 {
 	UE_LOG(LogTemp, Warning, TEXT("SpellSlot0 being cast in cheat spell class"));

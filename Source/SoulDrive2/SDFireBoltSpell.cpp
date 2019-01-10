@@ -17,12 +17,6 @@ ASDFireBoltSpell::ASDFireBoltSpell(const class FObjectInitializer& FOI)
 // 	Anim = anim.Object;
 }
 
-void ASDFireBoltSpell::Init(AController* OwnedBy)
-{
-	Caster = OwnedBy;
-	CasterCharacter = dynamic_cast<ACharacter *>(Caster->GetPawn());
-}
-
 void ASDFireBoltSpell::HandleTarget(AActor *Target, bool IsAlly)
 {
 	const FDamageEvent DamageEvent;
