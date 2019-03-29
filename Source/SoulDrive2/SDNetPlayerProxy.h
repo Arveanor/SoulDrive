@@ -46,6 +46,8 @@ private:
 	UPROPERTY()
 	FVector LerpTarget;
 
+	uint8 PlayerId;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -89,4 +91,5 @@ public:
 	void SetServerController_Implementation(ASDNetPlayerController *NetControllerS);
 	bool SetServerController_Validate(ASDNetPlayerController *NetControllerS);
 
+	void SpawnServerCharacter();
 };

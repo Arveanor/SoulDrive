@@ -33,6 +33,9 @@ protected:
 	void OnSpellSlot1Pressed();
 	void OnSpellSlot1Released();
 	void OnSpellSlot2Pressed();
+	void OnSpellSlot2Released();
+	void OnSpellSlot3Pressed();
+	void OnSpellSlot3Released();
 
 	/* Stores actions to be executed when the player has control again */
 	TQueue<void (ASDNetPlayerControllerProxy::*)(FVector)> InputQueue;
@@ -96,6 +99,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void OnItemPickup(ASDBaseEquipment *PickedUp);
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void OnItemEquipped(ASDBaseEquipment* Equipped, bool MainHand);
+
+	UFUNCTION(BlueprintCallable, Category = "Player")
+	void OnServerCharLoaded(uint8 PlayerId);
+
 	UFUNCTION(BlueprintCallable, Category = "Levels")
 	void SetControllerInputModeGame();
 
@@ -107,6 +116,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Spells")
 	FTimerHandle GetSpellTimer(uint8 SpellSlot);
+
+	UFUNCTION(BlueprintCallable, Category = "Quests")
+	TArray<USDBaseQuest *> GetAllQuests();
+	
+	UFUNCTION(BlueprintCallable, Category = "Quests")
+	void AddQuest(USDBaseQuest* Quest);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerGameMenu;
@@ -126,6 +141,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	uint8 OverwritableAction;
 
+	virtual void GetSeamlessTravelActorList(bool bToEntry, TArray <class AActor *> &ActorList) override;
+
 	void OnClosePlayerMenu();
 	void OnCloseMpMenu();
 	void OnCloseInventoryMenu();
@@ -137,6 +154,7 @@ private:
 	void OnMovementKeyReleased();
 
 	void SwapWeapons();
+	USDBaseQuest* ConvertQuestStruct(FQuestStruct QuestStruct);
 
 	// Server side character and controller to handle real logic for this proxy
 	ASDNetPlayerController *ServerController;
@@ -157,5 +175,8 @@ private:
 	ASDBaseSpell* SpellSlot1;
 	ASDBaseSpell* SpellSlot2;
 	ASDBaseSpell* SpellSlot3;
+
+	UPROPERTY()
+	TArray<USDBaseQuest* > ActiveQuests;	
 
 };

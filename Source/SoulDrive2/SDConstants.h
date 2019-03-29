@@ -9,6 +9,7 @@
  */
 UENUM(BlueprintType)
 enum class WeaponRequirements : uint8 {
+	NotAWeapon,
 	MeleeOnly,
 	RangedOnly,
 	AnyWeapon

@@ -30,5 +30,12 @@ private:
 	
 	FString FireboltMeshName;
 	float ProjectileSpeed;
+	UPROPERTY()
+	UParticleSystemComponent* ParticleComp;
 
+	UPROPERTY()
+	UParticleSystem* ParticleSys;
+
+	UPROPERTY()
+	UMaterialInstance* Material;
 };

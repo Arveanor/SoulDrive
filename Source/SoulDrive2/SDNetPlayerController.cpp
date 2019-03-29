@@ -12,13 +12,20 @@ ASDNetPlayerController::ASDNetPlayerController()
 
 bool ASDNetPlayerController::MoveToLocation(FVector &Goal)
 {
-	UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
-	ASDNetPlayerPawn* ControlledPawn = dynamic_cast<ASDNetPlayerPawn *>(GetPawn());
-	if (ControlledPawn != nullptr && !ControlledPawn->IsCasting())
+	if (GetWorld() != nullptr)
 	{
-		ControlledPawn->IsMoving = true;
-		NavSys->SimpleMoveToLocation(this, Goal);
-		return true;
+		UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
+		ASDNetPlayerPawn* ControlledPawn = dynamic_cast<ASDNetPlayerPawn *>(GetPawn());
+		if (ControlledPawn != nullptr && !ControlledPawn->IsCasting())
+		{
+			ControlledPawn->IsMoving = true;
+			NavSys->SimpleMoveToLocation(this, Goal);
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 	else
 	{
@@ -38,6 +45,7 @@ void ASDNetPlayerController::Tick(float DeltaTime)
 		}
 	}
 }
+
 
 void ASDNetPlayerController::SwapWeapons()
 {

@@ -18,6 +18,11 @@ void ASDBasePawn::SetPlayerID(int id)
 	PlayerId = id;
 }
 
+int ASDBasePawn::GetPlayerID()
+{
+	return PlayerId;
+}
+
 // Called when the game starts or when spawned
 void ASDBasePawn::BeginPlay()
 {

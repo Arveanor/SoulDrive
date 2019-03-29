@@ -57,7 +57,7 @@ void ASDCelestialFragmentSpell::CastSpell(FVector target)
 		auto ResultActor = Cast<ASDGravProjectile>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, TargetClass, SpawnTransform));
 		if (ResultActor != nullptr)
 		{
-			ResultActor->Init(ProjectileMeshName, ProjectileSpeed, ProjectileMat);
+			//ResultActor->Init(ProjectileMeshName, ProjectileSpeed, nullptr);
 			UGameplayStatics::FinishSpawningActor(ResultActor, SpawnTransform);
 			ResultActor->SetParentSpell(this);
 		}

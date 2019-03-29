@@ -12,32 +12,24 @@ ASDProjectile::ASDProjectile(const class FObjectInitializer& FOI)
 
 	bReplicates = true;
 
-	ParticleComp = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particles"));
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
 
-	static ConstructorHelpers::FObjectFinder<UParticleSystem> ParticleSys(TEXT("ParticleSystem'/Game/SDContent/VFX/Fireball/PFX_Fireball_Sparks_01.PFX_Fireball_Sparks_01'"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ProjMesh(TEXT("'/Engine/BasicShapes/Plane.Plane'"));
-	static ConstructorHelpers::FObjectFinder<UMaterialInstance> MatInst(TEXT("MaterialInstanceConstant'/Game/SDContent/VFX/Fireball/MAT_Fireball_01_Inst.MAT_Fireball_01_Inst'"));
 
-	Material = (UMaterialInstance*)MatInst.Object;
-	ParticleComp->SetTemplate(ParticleSys.Object);
 	MeshComp->SetStaticMesh(ProjMesh.Object);
-	ParticleComp->SetupAttachment(MeshComp);
 	RootComponent = MeshComp;
 
-	//	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	MeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
-
-	Material_Dyn = UMaterialInstanceDynamic::Create(Material, MeshComp);
-	MeshComp->SetMaterial(0, Material_Dyn);
-
 	MeshComp->OnComponentBeginOverlap.AddDynamic(this, &ASDProjectile::OnOverlapBegin);
 }
 
-void ASDProjectile::Init(FString MeshName, float Velocity, UMaterialInterface *Mat)
+void ASDProjectile::Init(FString MeshName, float Velocity, UMaterialInstance* Mat, FVector InForward)
 {
 	StaticMeshName = MeshName;
+	TargetForward = InForward;
 	ProjectileSpeed = Velocity;
+	Material_Dyn = UMaterialInstanceDynamic::Create(Mat, MeshComp);
+	MeshComp->SetMaterial(0, Material_Dyn);
 }
 
 void ASDProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -50,7 +42,7 @@ void ASDProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 void ASDProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-	ProjectileVelocity = ProjectileSpeed * GetActorForwardVector();
+	ProjectileVelocity = ProjectileSpeed * TargetForward;
 	ProjectileVelocity.Z = 0.f;
 }
 

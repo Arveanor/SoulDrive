@@ -11,6 +11,34 @@ enum class EItemType : uint8
 {
 	Weapon UMETA(DisplayName="Weapon"),
 	Shoulder UMETA(DisplayName="Shoulder"),
+	QuestItem UMETA(DisplayName="Quest Item")
+};
+
+USTRUCT(BlueprintType)
+struct FItemStruct {
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FName ItemName;
+
+	UPROPERTY()
+	EItemType ItemType;
+
+	UPROPERTY()
+	WeaponRequirements WeaponType;
+
+	UPROPERTY()
+	FString MeshName;
+
+	UPROPERTY()
+	uint8 isEquipped = 0; // 0 = unequipped, 1 = equipped, 2 = equipped in alternate slot (for weapons)
+
+	FItemStruct() {}
+
+	inline bool operator==(const FItemStruct& other) const
+	{
+		return other.ItemName == ItemName;
+	}
 };
 
 UCLASS()
@@ -36,11 +64,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Items")
 	void SetActiveInWorld(bool active);
 
+	void SetStaticMesh(UStaticMesh *Mesh);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
 	FName ItemName;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
 	EItemType IType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Items")
+	uint8 EquippedStatus;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
 	FString MeshName;
@@ -49,4 +82,5 @@ public:
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Player, meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* MeshComp;
+
 };

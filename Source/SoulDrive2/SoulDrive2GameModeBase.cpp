@@ -209,9 +209,16 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 
 	for (int actor = 0; actor < Params.ActorIds.Num(); actor++)
 	{
-		int i = FMath::FRandRange(0, openIndices.Num() - 1);
-		ActorLocations.Add(FIntPair(Params.ActorIds[actor], openIndices[i]));
-		openIndices.RemoveAt(i);
+		if (openIndices.Num() > 0)
+		{
+			int i = FMath::FRandRange(0, openIndices.Num() - 1);
+			ActorLocations.Add(FIntPair(Params.ActorIds[actor], openIndices[i]));
+			openIndices.RemoveAt(i);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("ran out of open locations to spawn actors"));
+		}
 	}
 
 // 	for (int32 i : openIndices)

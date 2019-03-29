@@ -3,13 +3,43 @@
 #pragma once
 
 #include "Engine/GameInstance.h"
-#include "SDBaseEquipment.h"
+#include "SDBaseWeapon.h"
 #include "SDBasePawn.h"
+#include "SDBaseQuest.h"
 #include "SDGameInstance.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTestDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryPickupDelegate, ASDBaseEquipment*, PickedUp );
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryDropDelegate, ASDBaseEquipment*, Dropped );
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryEquipDelegate, ASDBaseEquipment*, Equipped, bool, MainHand );
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FServerCharLoaded, uint8, PlayerId );
+
+
+USTRUCT(BlueprintType)
+struct FPlayerInventory {
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FItemStruct> InventoryArray;
+	
+	UPROPERTY()
+	uint8 PlayerId;
+
+	FPlayerInventory() {}
+};
+
+USTRUCT(BlueprintType)
+struct FPlayerQuests {
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FQuestStruct> QuestArray;
+
+	UPROPERTY()
+	uint8 PlayerId;
+
+	FPlayerQuests() {}
+};
 
 /**
  * 
@@ -24,7 +54,7 @@ public:
 	USDGameInstance();
 	void ActorLoaded();
 
-	void GetPlayerIDOnJoin(ASDBasePawn *Player);
+	uint8 GetPlayerIDOnJoin();
 	
 	UPROPERTY(BlueprintAssignable, Category = "Test")
 	FTestDelegate OnTestDelegate;
@@ -35,16 +65,41 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FInventoryDropDelegate OnItemDropped;
 
-	TArray<ASDBaseEquipment *> *GetPlayerInventory(int PlayerId);
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FInventoryEquipDelegate OnItemEquipped;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player")
+	FServerCharLoaded OnServerCharLoaded;
+
+	FPlayerQuests GetPlayerQuests(int PlayerId);
+	int AddQuestListForPlayer(int PlayerId);
+	void AddQuestToPlayer(int PlayerId, USDBaseQuest* Quest);
+
+	FPlayerInventory GetPlayerInventory(int PlayerId);
+	void AddItemToPlayerInventory(int PlayerId, ASDBaseEquipment* Item);
+	int AddInventoryForPlayer(int PlayerId);
+	void SetItemEquipped(int PlayerId, ASDBaseEquipment* Item, uint8 Status);
+	void RemoveItemFromPlayerInventory(int PlayerId, ASDBaseEquipment* Item);
 	bool GetIsOnlineSession();
 	void OnlineSessionCreated();
 
-private:
 	FCriticalSection ServerCriticalSection;
+
+private:
 
 	int CriticalFunctionsCount;
 	int PlayersConnected;
 	bool IsOnlineSession;
-	TArray<TArray<ASDBaseEquipment *> *> PlayerInventoryArray;
-	int NextPlayerID;
+
+	UPROPERTY()
+	TArray<FPlayerInventory> PlayerInventoryArray;
+
+	UPROPERTY()
+	TArray<FPlayerQuests> PlayerQuestArray;
+
+	UPROPERTY()
+	uint8 NextPlayerID = 0;
+
+	int FindPlayerInventory(int PlayerId);
+	int FindPlayerQuests(int PlayerId);
 };

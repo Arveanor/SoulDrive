@@ -14,7 +14,7 @@ class SOULDRIVE2_API ASDProjectile : public APawn
 public:
 
 	ASDProjectile(const class FObjectInitializer& FOI);
-	void Init(FString MeshName, float Velocity, UMaterialInterface *Mat);
+	void Init(FString MeshName, float Velocity, UMaterialInstance* Mat, FVector InForward);
 
 protected:
 	// Called when the game starts or when spawned
@@ -45,13 +45,10 @@ private:
 	UStaticMeshComponent* MeshComp;
 
 	UPROPERTY()
-	UParticleSystemComponent* ParticleComp;
-
-	UPROPERTY()
-	UMaterialInstance* Material;
-
-	UPROPERTY()
 	UMaterialInstanceDynamic* Material_Dyn;
 	
 	FString StaticMeshName;
+
+	UPROPERTY()
+	FVector TargetForward;
 };

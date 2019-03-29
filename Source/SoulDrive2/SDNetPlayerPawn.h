@@ -68,7 +68,9 @@ public:
 	ASDBaseWeapon* GetMainWeapon();
 	ASDBaseWeapon* GetAltWeapon();
 
-	TArray<ASDBaseEquipment *> *CarriedItems;
+
+	UPROPERTY()
+	TArray<ASDBaseEquipment *> CarriedItems;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Animation")
 	bool IsMoving = false;
@@ -78,4 +80,6 @@ private:
 	TArray<ASDBaseWeapon *> MainWeapons;
 	TArray<ASDBaseWeapon *> AltWeapons;
 	TArray<ASDBaseWeapon*>* CurrentWeaponSet;
+
+	TArray<ASDBaseEquipment *> ConvertItemStruct(const TArray<FItemStruct> &StructList);
 };

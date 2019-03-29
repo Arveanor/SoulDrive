@@ -7,17 +7,30 @@
 
 void ASDNetPlayerPawn::BeginPlay()
 {
+
 	Super::BeginPlay();
 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
 	if (GameInstance != nullptr)
 	{
 		if (GameInstance->GetIsOnlineSession())
 		{
-			CarriedItems = GameInstance->GetPlayerInventory(PlayerId);
+			CarriedItems = ConvertItemStruct( GameInstance->GetPlayerInventory(PlayerId).InventoryArray);
 		}
 		else
 		{
-			CarriedItems = GameInstance->GetPlayerInventory(0);
+			CarriedItems = ConvertItemStruct(GameInstance->GetPlayerInventory(0).InventoryArray);
+			for (ASDBaseEquipment* Item : CarriedItems)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("ASDNetPlayerPawn::BeginPlay: Adding item to player inventory")));
+				if (Item->EquippedStatus > 0)
+				{
+					GameInstance->OnItemEquipped.Broadcast(Item, (Item->EquippedStatus == 1) ? true : false);
+				}
+				else
+				{
+					GameInstance->OnItemPickup.Broadcast(Item);
+				}
+			}
 		}
 	}
 	MaxHp = 100;
@@ -39,8 +52,6 @@ ASDNetPlayerPawn::ASDNetPlayerPawn()
 	this->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASDNetPlayerPawn::OnOverlapBegin);
 	this->GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ASDNetPlayerPawn::OnHitDetected);
 
-	MainWeapons.SetNumZeroed(2, true);
-	AltWeapons.SetNumZeroed(2, true);
 	CurrentWeaponSet = &MainWeapons;
 
 	IsSpellCasting = false;
@@ -58,6 +69,7 @@ void ASDNetPlayerPawn::TravelToLevel(FName LevelToLoad)
 		}
 		else
 		{
+			UGameplayStatics::OpenLevel(GetWorld(), LevelToLoad);
 			UE_LOG(LogTemp, Warning, TEXT("returned false"));
 		}
 	}
@@ -65,9 +77,9 @@ void ASDNetPlayerPawn::TravelToLevel(FName LevelToLoad)
 
 bool ASDNetPlayerPawn::DropItem(ASDBaseEquipment *Equipment)
 {
-	if (CarriedItems->Find(Equipment))
+	if (CarriedItems.Find(Equipment))
 	{
-		CarriedItems->Remove(Equipment);
+		CarriedItems.Remove(Equipment);
 		return true;
 	}
 	else
@@ -78,6 +90,8 @@ bool ASDNetPlayerPawn::DropItem(ASDBaseEquipment *Equipment)
 
 void ASDNetPlayerPawn::EquipItem(ASDBaseEquipment *Item, uint8 Slot)
 {
+	USDGameInstance* GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
+	uint8 EquippedStatus = 1;
 	FName SocketName;
 	if (Item != nullptr)
 	{
@@ -92,6 +106,7 @@ void ASDNetPlayerPawn::EquipItem(ASDBaseEquipment *Item, uint8 Slot)
 			SocketName = TEXT("Hand_R_endSocket");
 			break;
 		case(EEquipSlot::AltWeaponMainHand):
+			EquippedStatus = 2;
 			if (CurrentWeaponSet == &MainWeapons)
 			{
 				SwapWeapons();
@@ -102,17 +117,25 @@ void ASDNetPlayerPawn::EquipItem(ASDBaseEquipment *Item, uint8 Slot)
 		case(EEquipSlot::Shoulder):
 			SocketName = TEXT("Shoulder_LSocket");
 		}
+		if (GameInstance != nullptr)
+		{
+			GameInstance->SetItemEquipped(PlayerId, Item, EquippedStatus);
+			Item->EquippedStatus = EquippedStatus;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Unable to mark item as equipped due to null game instance"));
+		}
 		Item->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 	}
 }
 
 void ASDNetPlayerPawn::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Server pawn overlap event!"));
 	ASDBaseEquipment *GroundItem = dynamic_cast<ASDBaseEquipment *>(OtherActor);
 	if (GroundItem != nullptr)
 	{
-		CarriedItems->Add(GroundItem);
+		CarriedItems.Add(GroundItem);
 		GroundItem->SetActiveInWorld(false);
 		USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
 		if (GameInstance != nullptr)
@@ -138,11 +161,11 @@ void ASDNetPlayerPawn::SwapWeapons()
 	if (CurrentWeaponSet == &MainWeapons)
 	{
 		CurrentWeaponSet = &AltWeapons;
-		if (MainWeapons[0] != nullptr)
+		if (MainWeapons.Num() > 0)
 		{
 			MainWeapons[0]->SetActorHiddenInGame(true);
 		}
-		if (AltWeapons[0] != nullptr)
+		if (AltWeapons.Num() > 0)
 		{
 			AltWeapons[0]->SetActorHiddenInGame(false);
 		}
@@ -151,11 +174,11 @@ void ASDNetPlayerPawn::SwapWeapons()
 	else
 	{
 		CurrentWeaponSet = &MainWeapons;
-		if (AltWeapons[0] != nullptr)
+		if (AltWeapons.Num() > 0)
 		{
 			AltWeapons[0]->SetActorHiddenInGame(true);
 		}
-		if (MainWeapons[0] != nullptr)
+		if (MainWeapons.Num() > 0)
 		{
 			MainWeapons[0]->SetActorHiddenInGame(false);
 		}
@@ -165,17 +188,78 @@ void ASDNetPlayerPawn::SwapWeapons()
 
 ASDBaseWeapon* ASDNetPlayerPawn::GetMainWeapon()
 {
-	return MainWeapons[0];
+	if (MainWeapons.Num() > 0)
+	{
+		return MainWeapons[0];
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
 ASDBaseWeapon* ASDNetPlayerPawn::GetAltWeapon()
 {
-	return AltWeapons[0];
+	if (AltWeapons.Num() > 0)
+	{
+		return AltWeapons[0];
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
+TArray<ASDBaseEquipment *> ASDNetPlayerPawn::ConvertItemStruct(const TArray<FItemStruct> &StructList)
+{
+	TArray<ASDBaseEquipment *> Result;
+	ASDBaseEquipment* Equipment;
+	ASDBaseWeapon *Weapon;
+	UStaticMesh *ItemMesh;
+
+	for (FItemStruct Item : StructList)
+	{
+		FActorSpawnParameters SpawnInfo;
+		SpawnInfo.Instigator = this;
+		if (Item.WeaponType != WeaponRequirements::NotAWeapon)
+		{
+			Weapon = GetWorld()->SpawnActor<ASDBaseWeapon>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
+			Weapon->WeaponType = Item.WeaponType;
+			Equipment = Weapon;
+		}
+		else
+		{
+			Equipment = GetWorld()->SpawnActor<ASDBaseEquipment>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
+		}
+		ItemMesh = LoadObject<UStaticMesh>(nullptr, *Item.MeshName);
+		Equipment->SetStaticMesh(ItemMesh);
+		Equipment->SetActiveInWorld(false);
+		if (Item.isEquipped == 1)
+		{
+			Equipment->SetActorHiddenInGame(false);
+			switch (Item.ItemType)
+			{
+			case(EItemType::Shoulder):
+				EquipItem(Equipment, (uint8)EEquipSlot::Shoulder);
+				break;
+			case(EItemType::Weapon):
+				EquipItem(Equipment, (uint8)EEquipSlot::MainWeaponMainHand);
+				break;
+			}
+		}
+		Equipment->SetActorScale3D(FVector(7.f, 7.f, 7.f));
+		Equipment->ItemName = Item.ItemName;
+		Equipment->IType = Item.ItemType;
+		Equipment->EquippedStatus = Item.isEquipped;
+		Equipment->MeshName = Item.MeshName;
+		Result.Add(Equipment);
+	}
+	return Result;
 }
 
 void ASDNetPlayerPawn::SetAltWeapon(ASDBaseWeapon * Weapon, bool bMainHand)
 {
-	AltWeapons[bMainHand ? 0 : 1] = Weapon;
+	AltWeapons.Insert(Weapon, bMainHand ? 0 : 1);
 }
 
 void ASDNetPlayerPawn::SetIsCasting(bool isCasting)
@@ -185,6 +269,8 @@ void ASDNetPlayerPawn::SetIsCasting(bool isCasting)
 
 bool ASDNetPlayerPawn::UnequipItem(ASDBaseEquipment *TargetItem)
 {
+	USDGameInstance* GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
+
 	bool success = false;
 	switch (TargetItem->IType)
 	{
@@ -205,10 +291,22 @@ bool ASDNetPlayerPawn::UnequipItem(ASDBaseEquipment *TargetItem)
 		}
 		break;
 	}
+	if (success)
+	{
+		if (GameInstance != nullptr)
+		{
+			GameInstance->SetItemEquipped(PlayerId, TargetItem, 0);
+			TargetItem->EquippedStatus = 0;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Unable to mark item as equipped due to null game instance"));
+		}
+	}
 	return success;
 }
 
 void ASDNetPlayerPawn::SetMainWeapon(ASDBaseWeapon *Weapon, bool bMainHand)
 {
-	MainWeapons[bMainHand ? 0 : 1] = Weapon;
+	MainWeapons.Insert(Weapon, bMainHand ? 0 : 1);
 }

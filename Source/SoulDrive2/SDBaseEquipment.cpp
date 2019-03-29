@@ -40,3 +40,11 @@ void ASDBaseEquipment::SetActiveInWorld(bool active)
 	this->SetActorEnableCollision(active);
 	this->SetActorHiddenInGame(!active);
 }
+
+void ASDBaseEquipment::SetStaticMesh(UStaticMesh *Mesh)
+{
+	if (Mesh != nullptr && MeshComp != nullptr)
+	{
+		MeshComp->SetStaticMesh(Mesh);
+	}
+}

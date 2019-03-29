@@ -17,6 +17,7 @@ public:
 	ASDNetPlayerController();
 	bool MoveToLocation(FVector &Goal);
 	virtual void Tick(float DeltaTime) override;
+
 private:
 	void SwapWeapons();
 };

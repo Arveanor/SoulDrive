@@ -19,5 +19,7 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Widgets")
 	void AddButtonToPanel(ASDBaseEquipment *ItemRef);
 	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Widgets")
+	void AddItemAsEquipped(ASDBaseEquipment* Item, bool bMainHand);
 	
 };

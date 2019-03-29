@@ -13,6 +13,13 @@ ASDFireBoltSpell::ASDFireBoltSpell(const class FObjectInitializer& FOI)
 	CooldownLength = 3.0f;
 	ManaCost = 15;
 
+	ParticleComp = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particles"));
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> ParticleSys1(TEXT("ParticleSystem'/Game/StarterContent/Particles/P_Fire.P_Fire'"));
+	ParticleSys = dynamic_cast<UParticleSystem *>(ParticleSys1.Object);
+	ParticleComp->SetTemplate(ParticleSys1.Object);
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> MatInst(TEXT("MaterialInstanceConstant'/Game/SDContent/VFX/Fireball/MAT_Fireball_01_Inst.MAT_Fireball_01_Inst'"));
+	Material = (UMaterialInstance*)MatInst.Object;
 // 	static ConstructorHelpers::FObjectFinder<UAnimSequence> anim(TEXT("AnimSequence'/Game/SDContent/Characters/Blob_Man/Blob_Man_Skeletal_Anim_Armature_Idle_Animation_Idle_Animation.Blob_Man_Skeletal_Anim_Armature_Idle_Animation_Idle_Animation'"));
 // 	Anim = anim.Object;
 }
@@ -46,15 +53,19 @@ void ASDFireBoltSpell::CastSpell(FVector target)
 			TSubclassOf<AActor> TargetClass = ASDProjectile::StaticClass();
 			FVector SpawnAt = Caster->GetPawn()->GetTransform().GetLocation();
 			FRotator SpawnRotation = Caster->GetPawn()->GetBaseAimRotation();
+			FVector Forward = target - SpawnAt;
+			Forward.Normalize();
 			SpawnAt.X += Caster->GetPawn()->GetTransform().GetRotation().GetAxisX().X * 55.0f;
 			SpawnAt.Y += Caster->GetPawn()->GetTransform().GetRotation().GetAxisY().Y * 55.0f;
 			FTransform SpawnTransform(SpawnRotation, SpawnAt);
 			auto ResultActor = Cast<ASDProjectile>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, TargetClass, SpawnTransform));
 			if (ResultActor != nullptr)
 			{
-				ResultActor->Init(FireboltMeshName, ProjectileSpeed, ProjectileMat);
+				ResultActor->Init(FireboltMeshName, ProjectileSpeed, Material, Forward);
 				UGameplayStatics::FinishSpawningActor(ResultActor, SpawnTransform);
 				ResultActor->SetParentSpell(this);
+
+				UGameplayStatics::SpawnEmitterAttached(ParticleSys, ResultActor->GetRootComponent());
 			}
 		}
 	}
