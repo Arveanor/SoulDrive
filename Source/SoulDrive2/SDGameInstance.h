@@ -12,8 +12,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTestDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryPickupDelegate, ASDBaseEquipment*, PickedUp );
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryDropDelegate, ASDBaseEquipment*, Dropped );
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryEquipDelegate, ASDBaseEquipment*, Equipped, bool, MainHand );
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FServerCharLoaded, uint8, PlayerId );
-
 
 USTRUCT(BlueprintType)
 struct FPlayerInventory {
@@ -67,9 +65,6 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FInventoryEquipDelegate OnItemEquipped;
-
-	UPROPERTY(BlueprintAssignable, Category = "Player")
-	FServerCharLoaded OnServerCharLoaded;
 
 	FPlayerQuests GetPlayerQuests(int PlayerId);
 	int AddQuestListForPlayer(int PlayerId);

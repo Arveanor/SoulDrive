@@ -154,7 +154,6 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 	{
 		GameInstance->OnItemPickup.AddDynamic(this, &ASDNetPlayerControllerProxy::OnItemPickup);
 		GameInstance->OnItemEquipped.AddDynamic(this, &ASDNetPlayerControllerProxy::OnItemEquipped);
-		GameInstance->OnServerCharLoaded.AddDynamic(this, &ASDNetPlayerControllerProxy::OnServerCharLoaded);
 	}
 	
 	if (IsLocalPlayerController())
