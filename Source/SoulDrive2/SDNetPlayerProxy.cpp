@@ -42,17 +42,6 @@ ASDNetPlayerProxy::ASDNetPlayerProxy(const class FObjectInitializer& FOI)
 void ASDNetPlayerProxy::BeginPlay()
 {
 	Super::BeginPlay();
-	if (AActor::HasAuthority())
-	{
-		USDGameInstance* GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
-		GameInstance->ServerCriticalSection.Lock();
-		PlayerId = GameInstance->GetPlayerIDOnJoin();
-		GameInstance->ServerCriticalSection.Unlock();
-		if (NetCharacterClass != nullptr && NetControllerClass != nullptr)
-		{
-			SpawnServerCharacter();
-		}
-	}
 
 	if (SDConstants::CheatMode)
 	{
@@ -71,28 +60,7 @@ void ASDNetPlayerProxy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 void ASDNetPlayerProxy::SpawnServerCharacter()
 {
-	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
-	if (ServerCharacter != nullptr) return;
-	FActorSpawnParameters SpawnParams;
-	FVector SpawnLocation = GetActorLocation();
-	UE_LOG(LogTemp, Warning, TEXT("Attempting to spawn Server Character at %s"), *SpawnLocation.ToString());
-	ServerCharacter = GetWorld()->SpawnActor<ASDNetPlayerPawn>(NetCharacterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
-	if (ServerCharacter != nullptr)
-	{
-		ServerCharacter->SetPlayerID(PlayerId);
-		GameInstance->OnServerCharLoaded.Broadcast(PlayerId);
-		ServerController = GetWorld()->SpawnActor<ASDNetPlayerController>(NetControllerClass, SpawnParams);
-		ServerController->Possess(ServerCharacter);
-		SetServerController(ServerController);
-		if (ServerController != nullptr)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Successfully created server controller!"));
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Could not create server controller!"));
-		}
-	}
+
 }
 
 // Called every frame
@@ -186,6 +154,7 @@ bool ASDNetPlayerProxy::SetLerpTarget_Validate(FVector target)
 void ASDNetPlayerProxy::SetServerController_Implementation(ASDNetPlayerController *NetControllerS)
 {
 	ServerController = NetControllerS;
+	ServerCharacter = dynamic_cast<ASDNetPlayerPawn *>(NetControllerS->GetPawn());
 }
 
 bool ASDNetPlayerProxy::SetServerController_Validate(ASDNetPlayerController *NetControllerS)

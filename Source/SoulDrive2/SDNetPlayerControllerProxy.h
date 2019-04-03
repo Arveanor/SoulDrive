@@ -62,8 +62,7 @@ protected:
 	UFUNCTION(Category = "Networking")
 	void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 
-	void CastSpell(ASDBaseSpell *SpellToCast);
-	
+	void CastSpell(ASDBaseSpell *SpellToCast);	
 public:
 	ASDNetPlayerControllerProxy();
 
@@ -141,7 +140,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	uint8 OverwritableAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
+	TSubclassOf<ASDNetPlayerPawn> NetCharacterClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
+	TSubclassOf<ASDNetPlayerController> NetControllerClass;
+
 	virtual void GetSeamlessTravelActorList(bool bToEntry, TArray <class AActor *> &ActorList) override;
+	virtual void Possess(APawn* InPawn) override;
 
 	void OnClosePlayerMenu();
 	void OnCloseMpMenu();
@@ -154,6 +160,7 @@ private:
 	void OnMovementKeyReleased();
 
 	void SwapWeapons();
+	void SpawnServerCharacter();
 	USDBaseQuest* ConvertQuestStruct(FQuestStruct QuestStruct);
 
 	// Server side character and controller to handle real logic for this proxy

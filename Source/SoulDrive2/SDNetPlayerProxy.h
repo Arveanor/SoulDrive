@@ -70,12 +70,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PlayerStats")
 	float GetDisplayMana();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
-	TSubclassOf<ASDNetPlayerPawn> NetCharacterClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
-	TSubclassOf<ASDNetPlayerController> NetControllerClass;
-
 	ASDNetPlayerController *GetServerController();
 
 	UFUNCTION(BlueprintCallable, Category = "Player")
