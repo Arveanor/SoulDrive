@@ -155,6 +155,16 @@ bool ASDNetPlayerPawn::IsCasting()
 	return IsSpellCasting;
 }
 
+void ASDNetPlayerPawn::SetInteractionTarget(AActor* Target)
+{
+	InteractionTarget = Target;
+}
+
+AActor* ASDNetPlayerPawn::GetInteractionTarget()
+{
+	return InteractionTarget;
+}
+
 void ASDNetPlayerPawn::SwapWeapons()
 {
 	FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, false);

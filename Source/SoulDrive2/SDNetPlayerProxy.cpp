@@ -58,11 +58,6 @@ void ASDNetPlayerProxy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ASDNetPlayerProxy, ServerCharacter);
 }
 
-void ASDNetPlayerProxy::SpawnServerCharacter()
-{
-
-}
-
 // Called every frame
 void ASDNetPlayerProxy::Tick(float DeltaTime)
 {

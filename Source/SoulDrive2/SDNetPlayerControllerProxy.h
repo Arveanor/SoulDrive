@@ -102,7 +102,7 @@ public:
 	void OnItemEquipped(ASDBaseEquipment* Equipped, bool MainHand);
 
 	UFUNCTION(BlueprintCallable, Category = "Player")
-	void OnServerCharLoaded(uint8 PlayerId);
+	void OnServerCharLoaded();
 
 	UFUNCTION(BlueprintCallable, Category = "Levels")
 	void SetControllerInputModeGame();
@@ -121,6 +121,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Quests")
 	void AddQuest(USDBaseQuest* Quest);
+
+	UFUNCTION(BlueprintCallable, Category = "Levels")
+	void TravelToLevel(FName LevelToLoad);
+
+	UFUNCTION(BlueprintCallable)
+	AActor* GetInteractionTarget();
+	void SetInteractionTarget(AActor* Target);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerGameMenu;
@@ -152,7 +159,10 @@ public:
 	void OnClosePlayerMenu();
 	void OnCloseMpMenu();
 	void OnCloseInventoryMenu();
-	
+	bool SpawnServerCharacter();
+
+	bool getIsTravelling();
+
 	void AddEquipmentToMenu(ASDBaseEquipment *HeldEquipment);
 private:
 
@@ -160,7 +170,6 @@ private:
 	void OnMovementKeyReleased();
 
 	void SwapWeapons();
-	void SpawnServerCharacter();
 	USDBaseQuest* ConvertQuestStruct(FQuestStruct QuestStruct);
 
 	// Server side character and controller to handle real logic for this proxy
@@ -174,6 +183,7 @@ private:
 	bool MpMenuCanBeOpened;
 	bool InventoryMenuCanBeOpened;
 	bool bMoveToLocation;
+	bool isTravelling; // going to a new level?
 
 	FInputModeUIOnly KeyRebindInput;
 	FInputModeGameAndUI StandardInput;
@@ -186,4 +196,5 @@ private:
 	UPROPERTY()
 	TArray<USDBaseQuest* > ActiveQuests;	
 
+	AActor* InteractionTarget;
 };

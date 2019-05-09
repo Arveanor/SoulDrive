@@ -13,6 +13,7 @@
 
 void ASDNetPlayerControllerProxy::PreClientTravel(const FString & PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
 {
+	isTravelling = true;
 	//SetInputMode(KeyRebindInput);
 }
 
@@ -50,7 +51,7 @@ ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
 	MpMenuCanBeOpened = true;
 	OverwritableAction = SDConstants::HotKeyOverrides::NO_ACTION_WRITABLE;
 	StandardInput.SetHideCursorDuringCapture(false);
-
+	isTravelling = false;
 }
 
 void ASDNetPlayerControllerProxy::PlayerTick(float DeltaTime)
@@ -222,6 +223,7 @@ void ASDNetPlayerControllerProxy::OnDebugActionReleased()
 
 void ASDNetPlayerControllerProxy::OnSpellSlot0Pressed()
 {
+	InteractionTarget = nullptr;
 	FVector TargetLocation(0.0f, 0.0f, 0.0f);
 	if (SpellSlot0 != nullptr)
 	{
@@ -254,6 +256,7 @@ void ASDNetPlayerControllerProxy::OnSpellSlot0Released()
 void ASDNetPlayerControllerProxy::OnSpellSlot1Pressed()
 {
 	CastSpell(SpellSlot1);
+	InteractionTarget = nullptr;
 }
 
 void ASDNetPlayerControllerProxy::MoveToLocation_Implementation(FVector target)
@@ -283,6 +286,7 @@ void ASDNetPlayerControllerProxy::OnSpellSlot1Released()
 void ASDNetPlayerControllerProxy::OnSpellSlot2Pressed()
 {
 	CastSpell(SpellSlot2);
+	InteractionTarget = nullptr;
 }
 
 void ASDNetPlayerControllerProxy::OnSpellSlot2Released()
@@ -293,6 +297,7 @@ void ASDNetPlayerControllerProxy::OnSpellSlot2Released()
 void ASDNetPlayerControllerProxy::OnSpellSlot3Pressed()
 {
 	CastSpell(SpellSlot3);
+	InteractionTarget = nullptr;
 }
 
 void ASDNetPlayerControllerProxy::OnSpellSlot3Released()
@@ -467,9 +472,13 @@ void ASDNetPlayerControllerProxy::OnItemEquipped(ASDBaseEquipment* Equipped, boo
 	}
 }
 
-void ASDNetPlayerControllerProxy::OnServerCharLoaded(uint8 PlayerId)
+void ASDNetPlayerControllerProxy::OnServerCharLoaded()
 {
-	if (PlayerProxy == nullptr) return;
+	if (PlayerProxy == nullptr)
+	{
+		PlayerProxy = dynamic_cast<ASDNetPlayerProxy*>(GetPawn());
+		if (PlayerProxy == nullptr) return;
+	}
 	ServerCharacter = PlayerProxy->GetServerCharacter();
 	USDGameInstance* GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
 	TArray<FQuestStruct> QuestStructs = GameInstance->GetPlayerQuests(ServerCharacter->GetPlayerID()).QuestArray;
@@ -501,26 +510,24 @@ void ASDNetPlayerControllerProxy::ToggleLoadingScreen()
 
 void ASDNetPlayerControllerProxy::HandleLevelLoaded()
 {
-// 	UE_LOG(LogTemp, Warning, TEXT("Level loaded for controller!"));
-// 	AActor* SpawnAt = nullptr;
-// 	if(GetWorld())
-// 		if(GetWorld()->GetAuthGameMode())
-// 			SpawnAt = GetWorld()->GetAuthGameMode()->ChoosePlayerStart(this);
-// 	APawn *MyPawn = GetPawn();
-// 	if (MyPawn != nullptr)
-// 	{
-// 		MyPawn->SetActorLocation(SpawnAt->GetActorLocation());
-// 	}
-// 	
-// 	ASDNetPlayerProxy* SDNetPawn = dynamic_cast<ASDNetPlayerProxy *>(MyPawn);
-// 	if (SDNetPawn != nullptr)
-// 	{
-// 		SDNetPawn->SpawnServerCharacter();
-// 	}
-//	ServerCharacter = GetWorld()->SpawnActor<ASDNetPlayerProxy>(NetCharacterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+	UE_LOG(LogTemp, Warning, TEXT("Level loaded for controller!"));
+	AActor* SpawnAt = nullptr;
+	if (GetWorld() && isTravelling)
+	{
+		isTravelling = false;
+		if (GetWorld()->GetAuthGameMode())
+		{
+			SpawnAt = GetWorld()->GetAuthGameMode()->ChoosePlayerStart(this);
+			APawn *MyPawn = GetPawn();
+			if (MyPawn != nullptr)
+			{
+				MyPawn->SetActorLocation(SpawnAt->GetActorLocation());
+				SpawnServerCharacter();
 
-/*	this->ToggleLoadingScreen();*/
-
+				OnServerCharLoaded();
+			}
+		}
+	}
 }
 
 FTimerHandle ASDNetPlayerControllerProxy::GetSpellTimer(uint8 SpellSlot)
@@ -557,26 +564,54 @@ void ASDNetPlayerControllerProxy::AddQuest(USDBaseQuest * Quest)
 	}
 }
 
+void ASDNetPlayerControllerProxy::TravelToLevel(FName LevelToLoad)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Attempting to do ServerTravel"));
+	if (HasAuthority())
+	{
+		bool result = GetWorld()->ServerTravel(LevelToLoad.ToString());
+		if (result)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("returned true"));
+		}
+		else
+		{
+			UGameplayStatics::OpenLevel(GetWorld(), LevelToLoad);
+			UE_LOG(LogTemp, Warning, TEXT("returned false"));
+		}
+	}
+}
+
+AActor* ASDNetPlayerControllerProxy::GetInteractionTarget()
+{
+	return InteractionTarget;
+}
+
+void ASDNetPlayerControllerProxy::SetInteractionTarget(AActor* Target)
+{
+	InteractionTarget = Target;
+	ServerCharacter->SetInteractionTarget(Target);
+}
+
 void ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(bool bToEntry, TArray <class AActor *> &ActorList)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(ToEntry: First%s)"), (bToEntry ? TEXT("True") : TEXT("False"))));
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(ToEntry: Second%s)"), (bToEntry ? TEXT("True") : TEXT("False"))));
 
 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
-	ASDNetPlayerPawn* ServerPawn = nullptr;
 	ASDNetPlayerProxy* ProxyPawn = dynamic_cast<ASDNetPlayerProxy *>(GetPawn());
 	
 	if (ProxyPawn != nullptr)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(ToEntry: %s): ProxyPawn is not null"), (bToEntry ? TEXT("True") : TEXT("False"))));
-		ServerPawn = ProxyPawn->GetServerCharacter();
+		ServerCharacter = ProxyPawn->GetServerCharacter();
 	}
 	if (bToEntry)
 	{
 		// Here we place things on ActorList
-		if (ServerPawn != nullptr)
+		if (ServerCharacter != nullptr)
 		{
-			for (ASDBaseEquipment* Equipment : ServerPawn->CarriedItems)
+			for (ASDBaseEquipment* Equipment : ServerCharacter->CarriedItems)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(ToEntry: %s): Placing item in ActorList"), (bToEntry ? TEXT("True") : TEXT("False"))));
 				ActorList.Add(Equipment);
@@ -615,16 +650,6 @@ void ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(bool bToEntry, TArr
 void ASDNetPlayerControllerProxy::Possess(APawn * InPawn)
 {
 	APlayerController::Possess(InPawn);
-	USDGameInstance* GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
-	if (GameInstance != nullptr)
-	{
-		SpawnServerCharacter();
-		ASDNetPlayerProxy* Proxy = dynamic_cast<ASDNetPlayerProxy *>(InPawn);
-		if (Proxy != nullptr)
-		{
-			Proxy->SetServerController(ServerController);
-		}
-	}
 }
 
 void ASDNetPlayerControllerProxy::OnClosePlayerMenu()
@@ -655,6 +680,7 @@ void ASDNetPlayerControllerProxy::AddEquipmentToMenu(ASDBaseEquipment *HeldEquip
 void ASDNetPlayerControllerProxy::OnMovementKeyPressed()
 {
 	bMoveToLocation = true;
+	InteractionTarget = nullptr;
 }
 
 void ASDNetPlayerControllerProxy::OnMovementKeyReleased()
@@ -671,21 +697,25 @@ void ASDNetPlayerControllerProxy::SwapWeapons()
 	ServerCharacter->SwapWeapons();
 }
 
-void ASDNetPlayerControllerProxy::SpawnServerCharacter()
+bool ASDNetPlayerControllerProxy::SpawnServerCharacter()
 {
 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
-	if (ServerCharacter != nullptr) return;
+	if (ServerCharacter != nullptr) return false;
 	FActorSpawnParameters SpawnParams;
-//	FVector SpawnLocation = GetActorLocation();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	FVector SpawnLocation = GetPawn()->GetActorLocation();
 	UE_LOG(LogTemp, Warning, TEXT("Attempting to spawn Server Character at %s"), *SpawnLocation.ToString());
 	ServerCharacter = GetWorld()->SpawnActor<ASDNetPlayerPawn>(NetCharacterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
 	if (ServerCharacter != nullptr)
 	{
-		//ServerCharacter->SetPlayerID(PlayerId);
-		//GameInstance->OnServerCharLoaded.Broadcast(PlayerId);
 		ServerController = GetWorld()->SpawnActor<ASDNetPlayerController>(NetControllerClass, SpawnParams);
 		ServerController->Possess(ServerCharacter);
-		//SetServerController(ServerController);
+		UPlayer* ServerPlayer = ServerController->GetNetOwningPlayer();
+		ASDNetPlayerProxy* Proxy = dynamic_cast<ASDNetPlayerProxy *>(GetPawn());
+		if (Proxy != nullptr && ServerController != nullptr)
+		{
+			Proxy->SetServerController(ServerController);
+		}
 		if (ServerController != nullptr)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Successfully created server controller!"));
@@ -694,7 +724,17 @@ void ASDNetPlayerControllerProxy::SpawnServerCharacter()
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Could not create server controller!"));
 		}
+		return true;
 	}
+	else
+	{
+		return false;
+	}
+}
+
+bool ASDNetPlayerControllerProxy::getIsTravelling()
+{
+	return isTravelling;
 }
 
 USDBaseQuest* ASDNetPlayerControllerProxy::ConvertQuestStruct(FQuestStruct QuestStruct)

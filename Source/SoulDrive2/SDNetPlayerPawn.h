@@ -63,6 +63,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	bool IsCasting();
 
+	void SetInteractionTarget(AActor* Target);
+	AActor* GetInteractionTarget();
+
 	void SwapWeapons();
 
 	ASDBaseWeapon* GetMainWeapon();
@@ -82,4 +85,6 @@ private:
 	TArray<ASDBaseWeapon*>* CurrentWeaponSet;
 
 	TArray<ASDBaseEquipment *> ConvertItemStruct(const TArray<FItemStruct> &StructList);
+
+	AActor* InteractionTarget;
 };

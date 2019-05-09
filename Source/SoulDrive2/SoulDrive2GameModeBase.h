@@ -210,6 +210,12 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevel(const TArray<FName> &SubLevels, int MapTileCountX, int MapTileCountY);
 
+	UFUNCTION(BlueprintCallable)
+	bool GetIsLevelActive();
+
+	UFUNCTION(BlueprintCallable)
+	void SetLevelActive(bool IsLoaded);
+
 	/****************************************************************************/
 	/* Generates a list of ints representing the tiles to be loaded on a map.   
 	** The list is 1 dimensional and must be mapped back to 2d space by the 
@@ -254,4 +260,10 @@ private:
 	void constructTileSet(TArray<FTileDescriptor> &TileSet, UDataTable* TileData);
 
 	UDataTable* EdgeMapData;
+	
+	UPROPERTY()
+	bool IsLevelActive;
+
+protected:
+ 	void PostLogin(APlayerController* NewPlayer) override;
 };

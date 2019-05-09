@@ -84,6 +84,4 @@ public:
 	void SetServerController(ASDNetPlayerController *NetControllerS);
 	void SetServerController_Implementation(ASDNetPlayerController *NetControllerS);
 	bool SetServerController_Validate(ASDNetPlayerController *NetControllerS);
-
-	void SpawnServerCharacter();
 };

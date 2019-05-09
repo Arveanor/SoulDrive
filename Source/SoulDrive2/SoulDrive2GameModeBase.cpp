@@ -45,6 +45,17 @@ ASoulDrive2GameModeBase::ASoulDrive2GameModeBase()
 {
 	static ConstructorHelpers::FObjectFinder<UDataTable> temp(TEXT("DataTable'/Game/SDContent/Levels/InstancedSMLevel/EdgeData_1.EdgeData_1'"));
 	EdgeMapData = temp.Object;
+	IsLevelActive = false;
+}
+
+bool ASoulDrive2GameModeBase::GetIsLevelActive()
+{
+	return IsLevelActive;
+}
+
+void ASoulDrive2GameModeBase::SetLevelActive(bool IsActive)
+{
+	IsLevelActive = IsActive;
 }
 
 /*
@@ -419,5 +430,25 @@ void ASoulDrive2GameModeBase::constructTileSet(TArray<FTileDescriptor> &TileSet,
 
 			TileSet.Add(NextDesc);
 		}
+	}
+}
+
+void ASoulDrive2GameModeBase::PostLogin(APlayerController* NewPlayer)
+{
+	AGameModeBase::PostLogin(NewPlayer);
+	ASDNetPlayerControllerProxy* ProxyController = dynamic_cast<ASDNetPlayerControllerProxy*>(NewPlayer);
+	if (ProxyController != nullptr)
+	{
+		if (!ProxyController->getIsTravelling())
+		{
+			if (ProxyController->SpawnServerCharacter())
+			{
+				ProxyController->OnServerCharLoaded();
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Unable to spawn server character due to controller cast failed"));
 	}
 }
