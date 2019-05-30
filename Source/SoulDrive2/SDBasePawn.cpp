@@ -37,6 +37,16 @@ void ASDBasePawn::Tick(float DeltaTime)
 
 }
 
+void ASDBasePawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASDBasePawn, MaxHp);
+	DOREPLIFETIME(ASDBasePawn, CurrentHp);
+	DOREPLIFETIME(ASDBasePawn, MaxMana);
+	DOREPLIFETIME(ASDBasePawn, CurrentMana);
+}
+
 // Called to bind functionality to input
 void ASDBasePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {

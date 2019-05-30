@@ -62,7 +62,8 @@ protected:
 	UFUNCTION(Category = "Networking")
 	void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 
-	void CastSpell(ASDBaseSpell *SpellToCast);	
+	UFUNCTION(Server, Reliable, WithValidation)
+	void CastSpell(ASDBaseSpell *SpellToCast, FHitResult Hit);	
 public:
 	ASDNetPlayerControllerProxy();
 
@@ -173,8 +174,11 @@ private:
 	USDBaseQuest* ConvertQuestStruct(FQuestStruct QuestStruct);
 
 	// Server side character and controller to handle real logic for this proxy
+	UPROPERTY(replicated)
 	ASDNetPlayerController *ServerController;
+	UPROPERTY(replicated)
 	ASDNetPlayerPawn *ServerCharacter;
+	UPROPERTY(replicated)
 	ASDNetPlayerProxy *PlayerProxy;
 
 	FString DebugActionAssignedKey;
@@ -187,11 +191,6 @@ private:
 
 	FInputModeUIOnly KeyRebindInput;
 	FInputModeGameAndUI StandardInput;
-
-	ASDBaseSpell* SpellSlot0;
-	ASDBaseSpell* SpellSlot1;
-	ASDBaseSpell* SpellSlot2;
-	ASDBaseSpell* SpellSlot3;
 
 	UPROPERTY()
 	TArray<USDBaseQuest* > ActiveQuests;	

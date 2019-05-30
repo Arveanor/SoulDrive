@@ -26,13 +26,13 @@ public:
 	UFUNCTION(Category = "Spells")
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Spells")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, replicated, Category = "Spells")
 	UParticleSystemComponent *ParticleComp;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Spells")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, replicated, Category = "Spells")
 	UCapsuleComponent *CapsuleComp;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Spells")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, replicated, Category = "Spells")
 	UDecalComponent *DecalComp;
 
 	void SetParentSpell(ASDBaseSpell *InParentSpell);
@@ -46,5 +46,9 @@ private:
 	UFUNCTION()
 	void OnFinished();
 
+	UPROPERTY()
 	ASDBaseSpell *ParentSpell;
+
+	UPROPERTY()
+	UMaterialInterface* MatInterface;
 };

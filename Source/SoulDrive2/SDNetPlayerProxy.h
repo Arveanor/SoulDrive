@@ -10,6 +10,7 @@
 #include "SDConstants.h"
 #include "SDNetPlayerProxy.generated.h"
 
+class ASDBaseSpell;
 class ASDNetPlayerControllerProxy;
 
 UCLASS()
@@ -42,6 +43,18 @@ private:
 
 	UPROPERTY(replicated)
 	ASDNetPlayerController *ServerController;
+
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), replicated)
+	ASDBaseSpell* SpellSlot0;
+
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), replicated)
+	ASDBaseSpell* SpellSlot1;
+
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), replicated)
+	ASDBaseSpell* SpellSlot2;
+
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), replicated)
+	ASDBaseSpell* SpellSlot3;
 
 	UPROPERTY()
 	FVector LerpTarget;
@@ -80,8 +93,9 @@ public:
 	void SetLerpTarget_Implementation(FVector target);
 	bool SetLerpTarget_Validate(FVector target);
 
-	UFUNCTION(Reliable, Client, WithValidation)
 	void SetServerController(ASDNetPlayerController *NetControllerS);
 	void SetServerController_Implementation(ASDNetPlayerController *NetControllerS);
 	bool SetServerController_Validate(ASDNetPlayerController *NetControllerS);
+
+	ASDBaseSpell* GetSpellSlot(uint8 Slot);
 };

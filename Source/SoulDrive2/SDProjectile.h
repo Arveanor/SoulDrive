@@ -23,9 +23,6 @@ protected:
 	UPROPERTY(replicated)
 	ASDBaseSpell* ParentSpell;
 
-	UPROPERTY(replicated)
-	int testInteger;
-
 	float ProjectileSpeed;
 	FVector ProjectileVelocity;
 
@@ -41,10 +38,12 @@ public:
 
 	virtual void SetParentSpell(ASDBaseSpell *Parent);
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Player, meta = (AllowPrivateAccess = "true"))
+	UFUNCTION(NetMulticast, Unreliable)
+	void NetMatChange(UMaterialInstance* Mat);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Player, meta = (AllowPrivateAccess = "true"), replicated)
 	UStaticMeshComponent* MeshComp;
 
-	UPROPERTY()
 	UMaterialInstanceDynamic* Material_Dyn;
 	
 	FString StaticMeshName;

@@ -17,14 +17,16 @@ void ASDNetPlayerControllerProxy::PreClientTravel(const FString & PendingURL, ET
 	//SetInputMode(KeyRebindInput);
 }
 
-void ASDNetPlayerControllerProxy::CastSpell(ASDBaseSpell *SpellToCast)
+bool ASDNetPlayerControllerProxy::CastSpell_Validate(ASDBaseSpell *SpellTocast, FHitResult Hit)
+{
+	return true;
+}
+
+void ASDNetPlayerControllerProxy::CastSpell_Implementation(ASDBaseSpell *SpellToCast, FHitResult Hit)
 {
 	FVector TargetLocation(0.0f, 0.0f, 0.0f);
 	if (SpellToCast != nullptr)
-	{
-		FHitResult Hit;
-		GetHitResultUnderCursor(ECC_Visibility, false, Hit);
-		
+	{	
 		if (Hit.bBlockingHit)
 		{
 			TargetLocation = Hit.Location;
@@ -45,6 +47,7 @@ void ASDNetPlayerControllerProxy::CastSpell(ASDBaseSpell *SpellToCast)
 ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
 {
 	bMoveToLocation = false;
+	bReplicates = true;
 	bShowMouseCursor = true;
 	HotkeyMenuCanBeOpened = true;
 	InventoryMenuCanBeOpened = true;
@@ -52,6 +55,16 @@ ASDNetPlayerControllerProxy::ASDNetPlayerControllerProxy()
 	OverwritableAction = SDConstants::HotKeyOverrides::NO_ACTION_WRITABLE;
 	StandardInput.SetHideCursorDuringCapture(false);
 	isTravelling = false;
+}
+
+void ASDNetPlayerControllerProxy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> & OutLifetimeProps) const 
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASDNetPlayerControllerProxy, ServerController);
+	DOREPLIFETIME(ASDNetPlayerControllerProxy, ServerCharacter);
+	DOREPLIFETIME(ASDNetPlayerControllerProxy, PlayerProxy);
+
 }
 
 void ASDNetPlayerControllerProxy::PlayerTick(float DeltaTime)
@@ -182,32 +195,6 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 				PlayerHud->AddToViewport();
 			}
 		}
-
-// 		if (wLoadingScreen)
-// 		{
-// 			LoadingScreen = CreateWidget<UUserWidget>(this, wLoadingScreen);
-// 			if (LoadingScreen)
-// 			{
-// 				LoadingScreen->AddToViewport();
-// 			}
-// 		}
-	}
-
-	if (SDConstants::CheatMode)
-	{
-		FActorSpawnParameters SpawnInfo;
-		SpawnInfo.Instigator = GetPawn();
-		SpellSlot0 = GetWorld()->SpawnActor<ASDCelestialFragmentSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
-		SpellSlot1 = GetWorld()->SpawnActor<ASDFireBoltSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
-		SpellSlot2 = GetWorld()->SpawnActor<ASDSlash>(FVector(0.f, 0.f, 0.f), FRotator(0.f, 0.f, 0.f), SpawnInfo);
-		SpellSlot3 = GetWorld()->SpawnActor<ASDRangedAttack>(FVector(0.f, 0.f, 0.f), FRotator(0.f, 0.f, 0.f), SpawnInfo);
-		ASDCheatSpell* ChildRef = dynamic_cast<ASDCheatSpell*>(SpellSlot0);
-
-// 		if (ChildRef != nullptr && ServerController != nullptr)
-// 		{
-// 			UE_LOG(LogTemp, Warning, TEXT("Initializing SpellSlot0"));
-// 			ChildRef->Init(ServerController);
-// 		}
 	}
 }
 
@@ -223,29 +210,9 @@ void ASDNetPlayerControllerProxy::OnDebugActionReleased()
 
 void ASDNetPlayerControllerProxy::OnSpellSlot0Pressed()
 {
-	InteractionTarget = nullptr;
-	FVector TargetLocation(0.0f, 0.0f, 0.0f);
-	if (SpellSlot0 != nullptr)
-	{
-		FHitResult Hit;
-		GetHitResultUnderCursor(ECC_Visibility, false, Hit);
-		if (Hit.bBlockingHit)
-		{
-			TargetLocation = Hit.Location;
-		}
-		if (ServerController == nullptr)
-		{
-			ServerController = PlayerProxy->GetServerController();
-		}
-
-		SpellSlot0->Init(dynamic_cast<APawn *> (GetPawn()));
-		SpellSlot0->SetTeamId(1);
-		SpellSlot0->CastSpell(TargetLocation);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("SpellSlot0 not being cast"));
-	}
+	FHitResult Hit;
+	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+	CastSpell(PlayerProxy->GetSpellSlot(0), Hit);
 }
 
 void ASDNetPlayerControllerProxy::OnSpellSlot0Released()
@@ -255,27 +222,10 @@ void ASDNetPlayerControllerProxy::OnSpellSlot0Released()
 
 void ASDNetPlayerControllerProxy::OnSpellSlot1Pressed()
 {
-	CastSpell(SpellSlot1);
+	FHitResult Hit;
+	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+	CastSpell(PlayerProxy->GetSpellSlot(1), Hit);
 	InteractionTarget = nullptr;
-}
-
-void ASDNetPlayerControllerProxy::MoveToLocation_Implementation(FVector target)
-{
-// 	if (ServerController == nullptr && PlayerProxy != nullptr)
-// 	{
-// 		UE_LOG(LogTemp, Warning, TEXT("PlayerProxy is not null"));
-// 		ServerController = PlayerProxy->GetServerController();
-// 	}
-// 	else
-// 	{
-// 		PlayerProxy = (ASDNetPlayerProxy *)GetPawn();
-// 		ServerController = PlayerProxy->GetServerController();
-// 	}
-	if (!ServerController->MoveToLocation(target))
-	{
-		NextCommand = &ASDNetPlayerControllerProxy::MoveToLocation;
-		NextCommandVector = target;
-	}
 }
 
 void ASDNetPlayerControllerProxy::OnSpellSlot1Released()
@@ -285,7 +235,9 @@ void ASDNetPlayerControllerProxy::OnSpellSlot1Released()
 
 void ASDNetPlayerControllerProxy::OnSpellSlot2Pressed()
 {
-	CastSpell(SpellSlot2);
+	FHitResult Hit;
+	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+	CastSpell(PlayerProxy->GetSpellSlot(2), Hit);
 	InteractionTarget = nullptr;
 }
 
@@ -296,13 +248,24 @@ void ASDNetPlayerControllerProxy::OnSpellSlot2Released()
 
 void ASDNetPlayerControllerProxy::OnSpellSlot3Pressed()
 {
-	CastSpell(SpellSlot3);
+	FHitResult Hit;
+	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+	CastSpell(PlayerProxy->GetSpellSlot(3), Hit);
 	InteractionTarget = nullptr;
 }
 
 void ASDNetPlayerControllerProxy::OnSpellSlot3Released()
 {
 
+}
+
+void ASDNetPlayerControllerProxy::MoveToLocation_Implementation(FVector target)
+{
+	if (!ServerController->MoveToLocation(target))
+	{
+		NextCommand = &ASDNetPlayerControllerProxy::MoveToLocation;
+		NextCommandVector = target;
+	}
 }
 
 bool ASDNetPlayerControllerProxy::MoveToLocation_Validate(FVector target)
@@ -312,10 +275,6 @@ bool ASDNetPlayerControllerProxy::MoveToLocation_Validate(FVector target)
 
 void ASDNetPlayerControllerProxy::OnLaunchPlayerMenu()
 {
-	if (HasAuthority())
-	{
-//		return;
-	}
 	if (PlayerGameMenu != nullptr)
 	{
 		if (!PlayerGameMenu->IsInViewport() && HotkeyMenuCanBeOpened)
@@ -337,10 +296,6 @@ void ASDNetPlayerControllerProxy::OnLaunchPlayerMenu()
 
 void ASDNetPlayerControllerProxy::OnLaunchMpMenu()
 {
-	if (HasAuthority())
-	{
-//		return;
-	}
 	if (MpMenu != nullptr)
 	{
 		if (!MpMenu->IsInViewport() && MpMenuCanBeOpened)
@@ -474,12 +429,6 @@ void ASDNetPlayerControllerProxy::OnItemEquipped(ASDBaseEquipment* Equipped, boo
 
 void ASDNetPlayerControllerProxy::OnServerCharLoaded()
 {
-	if (PlayerProxy == nullptr)
-	{
-		PlayerProxy = dynamic_cast<ASDNetPlayerProxy*>(GetPawn());
-		if (PlayerProxy == nullptr) return;
-	}
-	ServerCharacter = PlayerProxy->GetServerCharacter();
 	USDGameInstance* GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
 	TArray<FQuestStruct> QuestStructs = GameInstance->GetPlayerQuests(ServerCharacter->GetPlayerID()).QuestArray;
 	for (FQuestStruct Q : QuestStructs)
@@ -532,21 +481,13 @@ void ASDNetPlayerControllerProxy::HandleLevelLoaded()
 
 FTimerHandle ASDNetPlayerControllerProxy::GetSpellTimer(uint8 SpellSlot)
 {
-	switch(SpellSlot)
+	if (!HasAuthority())
 	{
-		case 0:
-			return SpellSlot0->TimerHandler;
-			break;
-		case 1:
-			return SpellSlot1->TimerHandler;
-			break;
-		case 2:
-			return SpellSlot2->TimerHandler;
-			break;
-		default:
-			//UE_LOG(LogTemp, ERROR, TEXT("Unable to retrieve spell timer from spellslot %d"), SpellSlot);
-			return SpellSlot0->TimerHandler;
+		UE_LOG(LogTemp, Warning, TEXT("Ayyy"));
 	}
+	if (SpellSlot > 3 || SpellSlot < 0) return PlayerProxy->GetSpellSlot(0)->TimerHandler;
+
+	return PlayerProxy->GetSpellSlot(SpellSlot)->TimerHandler;
 }
 
 TArray<USDBaseQuest *> ASDNetPlayerControllerProxy::GetAllQuests()

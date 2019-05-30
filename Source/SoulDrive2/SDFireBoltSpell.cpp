@@ -13,6 +13,8 @@ ASDFireBoltSpell::ASDFireBoltSpell(const class FObjectInitializer& FOI)
 	CooldownLength = 3.0f;
 	ManaCost = 15;
 
+	bReplicates = true;
+
 	ParticleComp = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particles"));
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> ParticleSys1(TEXT("ParticleSystem'/Game/StarterContent/Particles/P_Fire.P_Fire'"));
 	ParticleSys = dynamic_cast<UParticleSystem *>(ParticleSys1.Object);
@@ -26,6 +28,10 @@ ASDFireBoltSpell::ASDFireBoltSpell(const class FObjectInitializer& FOI)
 
 void ASDFireBoltSpell::HandleTarget(AActor *Target, bool IsAlly)
 {
+	if (HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Hello Kenobi"));
+	}
 	const FDamageEvent DamageEvent;
 	if (GetInstigator() != nullptr && !IsAlly)
 	{
@@ -52,8 +58,8 @@ void ASDFireBoltSpell::CastSpell(FVector target)
 			FActorSpawnParameters SpawnInfo;
 			TSubclassOf<AActor> TargetClass = ASDProjectile::StaticClass();
 			FVector SpawnAt = Caster->GetPawn()->GetTransform().GetLocation();
-			FRotator SpawnRotation = Caster->GetPawn()->GetBaseAimRotation();
 			FVector Forward = target - SpawnAt;
+			FRotator SpawnRotation = Forward.Rotation();
 			Forward.Normalize();
 			SpawnAt.X += Caster->GetPawn()->GetTransform().GetRotation().GetAxisX().X * 55.0f;
 			SpawnAt.Y += Caster->GetPawn()->GetTransform().GetRotation().GetAxisY().Y * 55.0f;

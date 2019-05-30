@@ -12,6 +12,7 @@ ASDBaseAoE::ASDBaseAoE()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
 	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
 	ParticleComp = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particlesz"));
 	DecalComp = CreateDefaultSubobject<UDecalComponent>(TEXT("Decal"));
@@ -21,18 +22,25 @@ ASDBaseAoE::ASDBaseAoE()
 
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> PS(TEXT("ParticleSystem'/Game/StarterContent/Particles/P_Explosion.P_Explosion'"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> MI(TEXT("Material'/Game/SDContent/Spells/Decals/MAT_Decal_GroundTargetRing.MAT_Decal_GroundTargetRing'"));
-		
+	
 	ParticleComp->SetTemplate(PS.Object);
-	DecalComp->SetDecalMaterial(MI.Object);
+	MatInterface = MI.Object;
+	DecalComp->SetMaterial(0, MI.Object);
 	FQuat MyQuat(0.0f, 90.0f, 0.0f, 1.0f);
 	DecalComp->SetRelativeRotation(MyQuat);
 	CapsuleComp->OnComponentBeginOverlap.AddDynamic(this, &ASDBaseAoE::OnOverlapBegin);
+
 	//CapsuleComp->SetRelativeScale3D(FVector(5.0f, 5.0f, 10.0f));
 }
 
 // Called when the game starts or when spawned
 void ASDBaseAoE::BeginPlay()
 {
+	if (HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Heyo Jay-o"));
+	}
+
 	Super::BeginPlay();
 	GetWorld()->GetTimerManager().SetTimer(TimerHandler, this, &ASDBaseAoE::OnPrimed, .35f, false, -1.0f);
  	SetActorTickEnabled(false);
@@ -40,13 +48,22 @@ void ASDBaseAoE::BeginPlay()
 	ParticleComp->DeactivateSystem();
 
 	DecalComp->SetLifeSpan(1.5f);
-
 }
 
 // Called every frame
 void ASDBaseAoE::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+}
+
+void ASDBaseAoE::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASDBaseAoE, CapsuleComp);
+	DOREPLIFETIME(ASDBaseAoE, DecalComp);
+	DOREPLIFETIME(ASDBaseAoE, ParticleComp);
 
 }
 

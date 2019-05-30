@@ -6,7 +6,6 @@
 #include "SDBaseEquipment.h"
 #include "SDBaseWeapon.h"
 #include "UnrealNetwork.h"
-//#include "SDNetPlayerControllerProxy.h"
 #include "SDNetPlayerPawn.generated.h"
 
 UENUM(BlueprintType)

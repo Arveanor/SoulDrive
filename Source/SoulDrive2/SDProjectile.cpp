@@ -11,12 +11,16 @@ ASDProjectile::ASDProjectile(const class FObjectInitializer& FOI)
 	PrimaryActorTick.bCanEverTick = true;
 
 	bReplicates = true;
+	bAlwaysRelevant = true;
+	bReplicateMovement = true;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ProjMesh(TEXT("'/Engine/BasicShapes/Plane.Plane'"));
 
 	MeshComp->SetStaticMesh(ProjMesh.Object);
+	//MeshComp->SetIsReplicated(true);
+
 	RootComponent = MeshComp;
 
 	MeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
@@ -30,12 +34,15 @@ void ASDProjectile::Init(FString MeshName, float Velocity, UMaterialInstance* Ma
 	ProjectileSpeed = Velocity;
 	Material_Dyn = UMaterialInstanceDynamic::Create(Mat, MeshComp);
 	MeshComp->SetMaterial(0, Material_Dyn);
+	NetMatChange(Mat);
 }
 
 void ASDProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
 	DOREPLIFETIME(ASDProjectile, ParentSpell);
-	DOREPLIFETIME(ASDProjectile, testInteger);
+	DOREPLIFETIME(ASDProjectile, MeshComp);
 }
 
 // Called when the game starts or when spawned
@@ -78,5 +85,10 @@ void ASDProjectile::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 void ASDProjectile::SetParentSpell(ASDBaseSpell *Parent)
 {
 	ParentSpell = Parent;
-	testInteger = 130;
+}
+
+void ASDProjectile::NetMatChange_Implementation(UMaterialInstance* Mat)
+{
+	Material_Dyn = UMaterialInstanceDynamic::Create(Mat, MeshComp);
+	MeshComp->SetMaterial(0, Material_Dyn);
 }

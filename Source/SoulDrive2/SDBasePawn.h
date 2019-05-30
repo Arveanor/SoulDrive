@@ -24,9 +24,16 @@ protected:
 
 	int PlayerId;
 
+	UPROPERTY(replicated)
 	int MaxHp;
+	
+	UPROPERTY( replicated )
 	float CurrentHp;
+
+	UPROPERTY(replicated)
 	int MaxMana;
+		
+	UPROPERTY(replicated)
 	float CurrentMana;
 
 public:	
