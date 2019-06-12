@@ -146,6 +146,16 @@ float ASDNetPlayerProxy::GetDisplayMana()
 	}
 }
 
+void ASDNetPlayerProxy::SetPlayerId(uint8 Id)
+{
+	PlayerId = Id;
+}
+
+uint8 ASDNetPlayerProxy::GetPlayerId()
+{
+	return PlayerId;
+}
+
 ASDNetPlayerController * ASDNetPlayerProxy::GetServerController()
 {
 	return ServerController;

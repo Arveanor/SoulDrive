@@ -32,7 +32,7 @@ protected:
 public:
 	ASDNetPlayerPawn();
 
-	UFUNCTION(BlueprintCallable, Category = "Levels")
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable, Category = "Levels")
 	void TravelToLevel(FName LevelToLoad);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -62,7 +62,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	bool IsCasting();
 
+	UFUNCTION(Server, Unreliable, WithValidation)
+	void ServerDestroy();
+
+	UFUNCTION(Server, Reliable, WithValidation)
 	void SetInteractionTarget(AActor* Target);
+
 	AActor* GetInteractionTarget();
 
 	void SwapWeapons();
@@ -77,6 +82,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Animation")
 	bool IsMoving = false;
 private:
+
+	UFUNCTION(Server, Unreliable, WithValidation)
+	void SetPortalTarget(const FString& InURL, ASDPortal* Portal);
 
 	bool IsSpellCasting;
 	TArray<ASDBaseWeapon *> MainWeapons;

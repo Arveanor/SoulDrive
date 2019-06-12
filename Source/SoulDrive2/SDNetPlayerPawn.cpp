@@ -3,6 +3,8 @@
 #include "SoulDrive2.h"
 #include "SDGameInstance.h"
 #include "SDNetPlayerPawn.h"
+#include "SDPortal.h"
+#include "SDNetPlayerProxy.h"
 
 void ASDNetPlayerPawn::BeginPlay()
 {
@@ -56,21 +58,39 @@ ASDNetPlayerPawn::ASDNetPlayerPawn()
 	IsSpellCasting = false;
 }
 
-void ASDNetPlayerPawn::TravelToLevel(FName LevelToLoad)
+bool ASDNetPlayerPawn::TravelToLevel_Validate(FName LevelToLoad)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Attempting to do ServerTravel"));
+	return true;
+}
+
+void ASDNetPlayerPawn::TravelToLevel_Implementation(FName LevelToLoad)
+{
+	ASDPortal* InteractionPortal = dynamic_cast<ASDPortal*>(InteractionTarget);
+	APlayerController* ProxyController = dynamic_cast<APlayerController*>(Instigator->Controller);
+
 	if (HasAuthority())
 	{
-		bool result = GetWorld()->ServerTravel(LevelToLoad.ToString());
-		if (result)
+		if (InteractionPortal != nullptr && !InteractionPortal->ExistingURL.IsEmpty())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("returned true"));
+			if (ProxyController != nullptr)
+			{
+				uint8 owningId;
+				ASDNetPlayerProxy* ProxyPawn = dynamic_cast<ASDNetPlayerProxy*>(ProxyController->GetControlledPawn());
+				if (ProxyPawn != nullptr)
+				{
+					owningId = ProxyPawn->GetPlayerId();
+				}
+				UE_LOG(LogTemp, Warning, TEXT("Target URL is %s"), *InteractionPortal->ExistingURL);
+				ProxyController->ClientTravel(InteractionPortal->ExistingURL, ETravelType::TRAVEL_Absolute);
+				GetWorld()->ServerTravel(InteractionPortal->ExistingURL, false, false);
+			}
 		}
-		else
+		if (InteractionPortal != nullptr)
 		{
-			UGameplayStatics::OpenLevel(GetWorld(), LevelToLoad);
-			UE_LOG(LogTemp, Warning, TEXT("returned false"));
+			if(ProxyController->GetNetConnection() != nullptr)
+				SetPortalTarget(ProxyController->GetNetConnection()->URL.ToString(), InteractionPortal);
 		}
+		ProxyController->ClientTravel(LevelToLoad.ToString(), ETravelType::TRAVEL_Absolute);
 	}
 }
 
@@ -154,7 +174,22 @@ bool ASDNetPlayerPawn::IsCasting()
 	return IsSpellCasting;
 }
 
-void ASDNetPlayerPawn::SetInteractionTarget(AActor* Target)
+void ASDNetPlayerPawn::ServerDestroy_Implementation()
+{
+	this->Destroy();
+}
+
+bool ASDNetPlayerPawn::ServerDestroy_Validate()
+{
+	return true;
+}
+
+bool ASDNetPlayerPawn::SetInteractionTarget_Validate(AActor* Target)
+{
+	return true;
+}
+
+void ASDNetPlayerPawn::SetInteractionTarget_Implementation(AActor* Target)
 {
 	InteractionTarget = Target;
 }
@@ -217,6 +252,16 @@ ASDBaseWeapon* ASDNetPlayerPawn::GetAltWeapon()
 	{
 		return nullptr;
 	}
+}
+
+void ASDNetPlayerPawn::SetPortalTarget_Implementation(const FString & InURL, ASDPortal* Portal)
+{
+	Portal->ExistingURL = InURL;
+}
+
+bool ASDNetPlayerPawn::SetPortalTarget_Validate(const FString & InURL, ASDPortal* Portal)
+{
+	return true;
 }
 
 TArray<ASDBaseEquipment *> ASDNetPlayerPawn::ConvertItemStruct(const TArray<FItemStruct> &StructList)

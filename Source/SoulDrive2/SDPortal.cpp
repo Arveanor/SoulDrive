@@ -48,3 +48,13 @@ void ASDPortal::Tick(float DeltaTime)
 
 }
 
+void ASDPortal::SetExistingURL_Implementation(const FString &InURL)
+{
+	ExistingURL = InURL;
+}
+
+bool ASDPortal::SetExistingURL_Validate(const FString &InURL)
+{
+	return true;
+}
+

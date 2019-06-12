@@ -83,6 +83,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PlayerStats")
 	float GetDisplayMana();
 
+	void SetPlayerId(uint8 Id);
+	uint8 GetPlayerId();
+
 	ASDNetPlayerController *GetServerController();
 
 	UFUNCTION(BlueprintCallable, Category = "Player")

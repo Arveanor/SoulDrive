@@ -33,7 +33,13 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(Server, Unreliable, WithValidation)
+	void SetExistingURL(const FString &InURL);
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	FName TargetLevel;	
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	FString ExistingURL; // If someone's already gone this way we want to travel to their instance rather than loading a new one
 	
 };

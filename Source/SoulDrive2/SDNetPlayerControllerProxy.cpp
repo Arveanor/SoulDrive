@@ -14,7 +14,8 @@
 void ASDNetPlayerControllerProxy::PreClientTravel(const FString & PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
 {
 	isTravelling = true;
-	//SetInputMode(KeyRebindInput);
+	const AActor* SCOwner = ServerCharacter->GetNetOwner();
+	ServerCharacter->ServerDestroy();
 }
 
 bool ASDNetPlayerControllerProxy::CastSpell_Validate(ASDBaseSpell *SpellTocast, FHitResult Hit)
@@ -136,6 +137,11 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
 	TArray<FQuestStruct> QuestStructs;
 
+	if (HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("authority on proxy controller beginplay"));
+	}
+
 	ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player);
 	if (LocalPlayer)
 	{
@@ -150,12 +156,16 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 	PlayerProxy = (ASDNetPlayerProxy *)GetPawn();
 	if (PlayerProxy != nullptr)
 	{
-			UE_LOG(LogTemp, Warning, TEXT("successfully grabbed player proxy instance!"));
-			ServerController = PlayerProxy->GetServerController();
-			if (ServerController != nullptr)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("successfully grabbed player server controller!"));
-			}
+		if (LocalPlayer)
+		{
+			PlayerProxy->SetPlayerId(LocalPlayer->GetControllerId());
+		}
+		UE_LOG(LogTemp, Warning, TEXT("successfully grabbed player proxy instance!"));
+		ServerController = PlayerProxy->GetServerController();
+		if (ServerController != nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("successfully grabbed player server controller!"));
+		}
 	}
 	
 	if (ServerController == nullptr && PlayerProxy != nullptr)
@@ -282,14 +292,10 @@ void ASDNetPlayerControllerProxy::OnLaunchPlayerMenu()
 			SetHotkeyMenuCanBeOpened(false);
 			GetPawn()->DisableInput(this);
 			PlayerGameMenu->AddToViewport();
-			//PlayerGameMenu->SetKeyboardFocus();
-			//KeyRebindInput = KeyRebindInput.SetWidgetToFocus(PlayerGameMenu->TakeWidget());	
-			//SetInputMode(KeyRebindInput);
 		}
 		else
 		{
 			PlayerGameMenu->RemoveFromViewport();
-//			SetInputMode(StandardInput);
 		}
 	}
 }
@@ -643,10 +649,17 @@ bool ASDNetPlayerControllerProxy::SpawnServerCharacter()
 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
 	if (ServerCharacter != nullptr) return false;
 	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.Instigator = GetPawn();
 	FVector SpawnLocation = GetPawn()->GetActorLocation();
-	UE_LOG(LogTemp, Warning, TEXT("Attempting to spawn Server Character at %s"), *SpawnLocation.ToString());
+
 	ServerCharacter = GetWorld()->SpawnActor<ASDNetPlayerPawn>(NetCharacterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+	ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player);
+	if (LocalPlayer)
+	{
+		ServerCharacter->SetPlayerID(LocalPlayer->GetControllerId());
+	}
 	if (ServerCharacter != nullptr)
 	{
 		ServerController = GetWorld()->SpawnActor<ASDNetPlayerController>(NetControllerClass, SpawnParams);
