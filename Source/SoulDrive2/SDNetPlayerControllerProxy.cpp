@@ -491,8 +491,27 @@ FTimerHandle ASDNetPlayerControllerProxy::GetSpellTimer(uint8 SpellSlot)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Ayyy"));
 	}
-	if (SpellSlot > 3 || SpellSlot < 0) return PlayerProxy->GetSpellSlot(0)->TimerHandler;
 
+	if (SpellSlot > 3 || SpellSlot < 0)
+	{
+		if (PlayerProxy == nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("PlayerProxy null in GetSpellTimer"));
+		}
+		else if (PlayerProxy->GetSpellSlot(0) == nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("SpellSlot0 null in GetSpellTimer"));
+		}
+		return PlayerProxy->GetSpellSlot(0)->TimerHandler;
+	}
+	if (PlayerProxy == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PlayerProxy null in GetSpellTimer"));
+	}
+	else if (PlayerProxy->GetSpellSlot(SpellSlot) == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SpellSlot%d null in GetSpellTimer"), &SpellSlot);
+	}
 	return PlayerProxy->GetSpellSlot(SpellSlot)->TimerHandler;
 }
 

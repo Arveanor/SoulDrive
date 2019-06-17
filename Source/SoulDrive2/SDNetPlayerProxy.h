@@ -84,6 +84,8 @@ public:
 	float GetDisplayMana();
 
 	void SetPlayerId(uint8 Id);
+
+	UFUNCTION(BlueprintCallable)
 	uint8 GetPlayerId();
 
 	ASDNetPlayerController *GetServerController();
