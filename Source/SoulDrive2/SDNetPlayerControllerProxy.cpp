@@ -140,26 +140,21 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 	if (HasAuthority())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("authority on proxy controller beginplay"));
-	}
-
-	ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player);
-	if (LocalPlayer)
-	{
-		if (LocalPlayer->GetControllerId() != 0)
-		{
-			GameInstance->ServerCriticalSection.Lock();
-			LocalPlayer->SetControllerId(GameInstance->GetPlayerIDOnJoin());
-			GameInstance->ServerCriticalSection.Unlock();
-		}
+		GameInstance->ServerCriticalSection.Lock();
+		UE_LOG(LogTemp, Warning, TEXT("Unused player id value = %d"), GameInstance->GetPlayerIDOnJoin());
+		GameInstance->ServerCriticalSection.Unlock();
 	}
 
 	PlayerProxy = (ASDNetPlayerProxy *)GetPawn();
 	if (PlayerProxy != nullptr)
 	{
-		if (LocalPlayer)
+		if (HasAuthority())
 		{
-			PlayerProxy->SetPlayerId(LocalPlayer->GetControllerId());
+			GameInstance->ServerCriticalSection.Lock();
+			PlayerProxy->SetPlayerId(GameInstance->GetPlayerIDOnJoin());
+			GameInstance->ServerCriticalSection.Unlock();
 		}
+
 		UE_LOG(LogTemp, Warning, TEXT("successfully grabbed player proxy instance!"));
 		ServerController = PlayerProxy->GetServerController();
 		if (ServerController != nullptr)
@@ -487,11 +482,6 @@ void ASDNetPlayerControllerProxy::HandleLevelLoaded()
 
 FTimerHandle ASDNetPlayerControllerProxy::GetSpellTimer(uint8 SpellSlot)
 {
-	if (!HasAuthority())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Ayyy"));
-	}
-
 	if (SpellSlot > 3 || SpellSlot < 0)
 	{
 		if (PlayerProxy == nullptr)
