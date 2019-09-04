@@ -6,7 +6,7 @@ public class SoulDrive2 : ModuleRules
 {
 	public SoulDrive2(TargetInfo Target)
 	{
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "UMG", "Slate", "SlateCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "UMG", "Slate", "SlateCore", "Networking", "Sockets" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

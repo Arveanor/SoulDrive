@@ -12,6 +12,8 @@
 #include "SDBaseSpell.h"
 #include "SDCheatSpell.h"
 #include "SDInventoryWidget.h"
+#include "Networking.h"
+#include "Runtime/Sockets/Public/Sockets.h"
 #include "SDNetPlayerControllerProxy.generated.h"
 
 /**
@@ -130,6 +132,9 @@ public:
 	AActor* GetInteractionTarget();
 	void SetInteractionTarget(AActor* Target);
 
+	UFUNCTION(BlueprintCallable)
+	void LaunchTCPServer();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerGameMenu;
 
@@ -167,8 +172,15 @@ public:
 	void AddEquipmentToMenu(ASDBaseEquipment *HeldEquipment);
 private:
 
+	UFUNCTION()
+	void TCPSocketListener();
+	UFUNCTION()
+	
+	void TCPConnectionListener();
 	void OnMovementKeyPressed();
 	void OnMovementKeyReleased();
+
+	FString StringFromBinaryArray(TArray<uint8> BinaryArray);
 
 	void SwapWeapons();
 	USDBaseQuest* ConvertQuestStruct(FQuestStruct QuestStruct);
@@ -181,6 +193,11 @@ private:
 	UPROPERTY(replicated)
 	ASDNetPlayerProxy *PlayerProxy;
 
+	FSocket* ListenerSocket;
+	FSocket* ConnectionSocket;
+	FIPv4Endpoint RemoteAddressForConnection;
+	FTimerHandle TCPConnectionTimer;
+	FTimerHandle TCPSocketTimer;
 	FString DebugActionAssignedKey;
 	FString SpellSlot0AssignedKey;
 	bool HotkeyMenuCanBeOpened;

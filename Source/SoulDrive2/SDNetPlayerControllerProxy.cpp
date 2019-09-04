@@ -8,6 +8,9 @@
 #include "SDSunBurstSpell.h"
 #include "SDSlash.h"
 #include "SDRangedAttack.h"
+#include "Runtime/Sockets/Public/IPAddress.h"
+#include "Runtime/Networking/Public/Interfaces/IPv4/IPv4Address.h"
+#include "Runtime/Networking/Public/Interfaces/IPv4//IPv4Endpoint.h"
 #include "SDNetPlayerControllerProxy.h"
 
 
@@ -139,6 +142,17 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 
 	if (HasAuthority())
 	{
+
+		IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
+		if (OnlineSub)
+		{
+			IOnlineSessionPtr Session = OnlineSub->GetSessionInterface();
+			if (Session.IsValid()) {
+				FOnlineSessionSettings Settings;
+				Session->CreateSession(1, FName("WAUSDOIPFSE"), Settings);
+			}
+		}
+			
 		UE_LOG(LogTemp, Warning, TEXT("authority on proxy controller beginplay"));
 		GameInstance->ServerCriticalSection.Lock();
 		UE_LOG(LogTemp, Warning, TEXT("Unused player id value = %d"), GameInstance->GetPlayerIDOnJoin());
@@ -549,6 +563,32 @@ void ASDNetPlayerControllerProxy::SetInteractionTarget(AActor* Target)
 	ServerCharacter->SetInteractionTarget(Target);
 }
 
+void ASDNetPlayerControllerProxy::LaunchTCPServer()
+{
+	FString SocketName = "CrossLevelSocket";
+	FIPv4Address ip(127, 0, 0, 1);
+	const FIPv4Endpoint Endpoint(ip, 7776);
+
+	ListenerSocket = FTcpSocketBuilder(SocketName)
+		.AsReusable()
+		.BoundToEndpoint(Endpoint)
+		.Listening(2);
+
+	int32 NewSize = 0;
+	int32 ReceiveBufferSize = 4096;
+	ListenerSocket->SetReceiveBufferSize(ReceiveBufferSize, NewSize);
+
+	if (ListenerSocket)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Socket listening"));
+		GetWorldTimerManager().SetTimer(TCPConnectionTimer, this, &ASDNetPlayerControllerProxy::TCPConnectionListener, 0.01, true);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Socket not listening"));
+	}
+}
+
 void ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(bool bToEntry, TArray <class AActor *> &ActorList)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(ToEntry: First%s)"), (bToEntry ? TEXT("True") : TEXT("False"))));
@@ -633,6 +673,60 @@ void ASDNetPlayerControllerProxy::AddEquipmentToMenu(ASDBaseEquipment *HeldEquip
 	}
 }
 
+void ASDNetPlayerControllerProxy::TCPSocketListener()
+{
+	if (!ConnectionSocket) return;
+
+	TArray<uint8> ReceivedData;
+
+	uint32 Size;
+	while (ConnectionSocket->HasPendingData(Size))
+	{
+		ReceivedData.Init(0, FMath::Min(Size, 65507u));
+
+		int32 Read = 0;
+		ConnectionSocket->Recv(ReceivedData.GetData(), ReceivedData.Num(), Read);
+	}
+
+	if (ReceivedData.Num() <= 0)
+	{
+		return;
+	}
+
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Data Bytes Read ~> %d"), ReceivedData.Num()));
+
+	const FString ReceivedUE4String = StringFromBinaryArray(ReceivedData);
+
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("As String Data -> %s"), *ReceivedUE4String));
+}
+
+void ASDNetPlayerControllerProxy::TCPConnectionListener()
+{
+	if (!ListenerSocket) return;
+
+	TSharedRef<FInternetAddr> RemoteAddress = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
+	bool Pending;
+
+	if (ListenerSocket->HasPendingConnection(Pending) && Pending)
+	{
+		if (ConnectionSocket)
+		{
+			ConnectionSocket->Close();
+			ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(ConnectionSocket);
+		}
+
+		ConnectionSocket = ListenerSocket->Accept(*RemoteAddress, TEXT("ClientLevel Received Socket Connection"));
+
+		if (ConnectionSocket != nullptr)
+		{
+			RemoteAddressForConnection = FIPv4Endpoint(RemoteAddress);
+
+			GetWorldTimerManager().SetTimer(TCPSocketTimer, this,
+				&ASDNetPlayerControllerProxy::TCPSocketListener, 0.01, true);
+		}
+	}
+}
+
 void ASDNetPlayerControllerProxy::OnMovementKeyPressed()
 {
 	bMoveToLocation = true;
@@ -642,6 +736,12 @@ void ASDNetPlayerControllerProxy::OnMovementKeyPressed()
 void ASDNetPlayerControllerProxy::OnMovementKeyReleased()
 {
 	bMoveToLocation = false;
+}
+
+FString ASDNetPlayerControllerProxy::StringFromBinaryArray(TArray<uint8> BinaryArray)
+{
+	BinaryArray.Add(0);
+	return FString(ANSI_TO_TCHAR(reinterpret_cast<const char*>(BinaryArray.GetData())));
 }
 
 void ASDNetPlayerControllerProxy::SwapWeapons()
