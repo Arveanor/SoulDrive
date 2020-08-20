@@ -46,6 +46,11 @@ void ASDPortal::OnBoxBeginOverlap(UPrimitiveComponent * OverlappedComp, AActor *
 			TCHAR* serializedChar = TestMsg.GetCharArray().GetData();
 			int32 sent = 0;
 			bool successful = Socket->Send((uint8*)TCHAR_TO_UTF8(serializedChar), FCString::Strlen(serializedChar), sent);
+
+// 			TCHAR recvBuffer = 0;
+// 			int32 received = 0;
+// 			Socket->Recv((uint8*)&recvBuffer, 255, received);
+// 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Response from server -> %s"), recvBuffer));
 		}
 	}
 }

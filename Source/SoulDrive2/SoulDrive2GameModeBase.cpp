@@ -5,6 +5,7 @@
 #include "Runtime/Engine/Classes/Engine/LevelStreaming.h"
 #include "SDNetPlayerProxy.h"
 #include "SDNetPlayerControllerProxy.h"
+#include "SDGameInstance.h"
 #include "SoulDrive2GameModeBase.h"
 #include "List.h"
 
@@ -435,16 +436,18 @@ void ASoulDrive2GameModeBase::constructTileSet(TArray<FTileDescriptor> &TileSet,
 
 void ASoulDrive2GameModeBase::PostLogin(APlayerController* NewPlayer)
 {
+	USDGameInstance* GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
+	if (GameInstance != nullptr)
+	{
+		//if (!GameInstance->LevelIsLoaded) return;
+	}
 	AGameModeBase::PostLogin(NewPlayer);
 	ASDNetPlayerControllerProxy* ProxyController = dynamic_cast<ASDNetPlayerControllerProxy*>(NewPlayer);
 	if (ProxyController != nullptr)
 	{
-		if (!ProxyController->getIsTravelling())
+		if (ProxyController->SpawnServerCharacter())
 		{
-			if (ProxyController->SpawnServerCharacter())
-			{
-				ProxyController->OnServerCharLoaded();
-			}
+			ProxyController->OnServerCharLoaded();
 		}
 	}
 	else

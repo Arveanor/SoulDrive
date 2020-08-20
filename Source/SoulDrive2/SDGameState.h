@@ -29,6 +29,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Loading")
 	bool GetIsMapGenerationCompleted();
 	
+	FURL SessionManagerURL;
+
 private:
 
 	bool IsMapGenerationCompleted;

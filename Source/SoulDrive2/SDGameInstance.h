@@ -66,6 +66,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FInventoryEquipDelegate OnItemEquipped;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Levels")
+	bool LevelIsLoaded = false;
+
 	FPlayerQuests GetPlayerQuests(int PlayerId);
 	int AddQuestListForPlayer(int PlayerId);
 	void AddQuestToPlayer(int PlayerId, USDBaseQuest* Quest);

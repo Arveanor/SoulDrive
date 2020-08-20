@@ -1,9 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "SoulDrive2.h"
-#include "SDSunBurstSpell.h"
+#include "SDPlayerState.h"
+#include "SDNetPlayerControllerProxy.h"
+#include "SDNetPlayerProxy.h"
 #include "SDBasePawn.h"
 
+
+class ASDNetPlayerControllerProxy;
 
 // Sets default values
 ASDBasePawn::ASDBasePawn()
@@ -56,17 +60,24 @@ void ASDBasePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 void ASDBasePawn::CastSpell(FName SpellName, FVector AimedAt)
 {
-// 	FActorSpawnParameters SpawnInfo;
-// 	ASDSunBurstSpell *Sunburst = GetWorld()->SpawnActor<ASDSunBurstSpell>(FVector(0.0f, 0.0f, 0.0f), FRotator(0.0f, 0.0f, 0.0f), SpawnInfo);
-// 	Sunburst->CastSpell(AimedAt);
 
 }
 
 float ASDBasePawn::TakeDamage(float Damage, FDamageEvent const & DamageEvent, AController * EventInstigator, AActor * DamageCauser)
 {
+	/*
+	** NetOwner here is the same as this but in NetPlayerPawn::BeginPlay it is correctly showing SDNetPlayerProxyController as the owner
+	** Strong suspicion is that this is either a replication problem or ...
+	*/
 	CurrentHp -= Damage;
-
-	return 0.0f;
+	const AActor* MyNetOwner = this->GetOwner();
+	const ASDNetPlayerControllerProxy* ProxyController = dynamic_cast<const ASDNetPlayerControllerProxy*>(MyNetOwner);
+	if (ProxyController != nullptr)
+	{
+		ASDPlayerState* OwningPlayerState = dynamic_cast<ASDPlayerState*>(ProxyController->PlayerState);
+		OwningPlayerState->DebugKey = 88;
+	}
+	return Damage;
 }
 
 int ASDBasePawn::GetTeamId_Implementation()

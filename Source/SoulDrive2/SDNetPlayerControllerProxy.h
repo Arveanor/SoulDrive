@@ -3,18 +3,17 @@
 #pragma once
 
 #include "GameFramework/PlayerController.h"
-#include "SDNetPlayerController.h"
-#include "Blueprint/UserWidget.h"
-#include "SDNetPlayerProxy.h"
-#include "SDBaseWeapon.h"
-#include "SDBaseEquipment.h"
-#include "SDConstants.h"
-#include "SDBaseSpell.h"
-#include "SDCheatSpell.h"
-#include "SDInventoryWidget.h"
 #include "Networking.h"
-#include "Runtime/Sockets/Public/Sockets.h"
+#include "SDBaseQuest.h"
 #include "SDNetPlayerControllerProxy.generated.h"
+
+class UUserWidget;
+class ASDNetPlayerProxy;
+class USDInventoryWidget;
+class ASDBaseSpell;
+class ASDBaseEquipment;
+class ASDBaseWeapon;
+class ASDNetPlayerController;
 
 /**
  * 
@@ -61,11 +60,15 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Widgets")
 	UUserWidget* LoadingScreen;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Testing")
+	int discoveringTransitionLevels;
+
 	UFUNCTION(Category = "Networking")
 	void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void CastSpell(ASDBaseSpell *SpellToCast, FHitResult Hit);	
+
 public:
 	ASDNetPlayerControllerProxy();
 
@@ -135,6 +138,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void LaunchTCPServer();
 
+	void PawnLeavingGame() override;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<class UUserWidget> wPlayerGameMenu;
 
@@ -166,7 +171,7 @@ public:
 	void OnCloseMpMenu();
 	void OnCloseInventoryMenu();
 	bool SpawnServerCharacter();
-
+	void CreateReconnectSave();
 	bool getIsTravelling();
 
 	void AddEquipmentToMenu(ASDBaseEquipment *HeldEquipment);
@@ -174,7 +179,9 @@ private:
 
 	UFUNCTION()
 	void TCPSocketListener();
+
 	UFUNCTION()
+	void AlertServer();
 	
 	void TCPConnectionListener();
 	void OnMovementKeyPressed();

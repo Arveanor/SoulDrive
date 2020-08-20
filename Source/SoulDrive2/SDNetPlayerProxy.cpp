@@ -46,7 +46,7 @@ ASDNetPlayerProxy::ASDNetPlayerProxy(const class FObjectInitializer& FOI)
 void ASDNetPlayerProxy::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	if (SDConstants::CheatMode)
 	{
 		FActorSpawnParameters ItemSpawnInfo;

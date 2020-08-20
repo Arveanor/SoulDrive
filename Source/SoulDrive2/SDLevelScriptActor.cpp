@@ -27,6 +27,7 @@ void ASDLevelScriptActor::GenerateLevelFromStream()
 //	GenerateMapData();
 	levelbase->LoadIsm(TileList, Params.TileCountX, Params.TileCountY);
 	ASDCommonUtilities::AllControllersPostLevelLoad(this);
+	UE_LOG(LogTemp, Warning, TEXT("In instanced level"));
 }
 // 
 // void ASDLevelScriptActor::GenerateMapData()

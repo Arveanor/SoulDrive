@@ -7,18 +7,30 @@
 #include "SDCelestialFragmentSpell.h"
 #include "SDSunBurstSpell.h"
 #include "SDSlash.h"
+#include "SDReconnectSaveGame.h"
 #include "SDRangedAttack.h"
 #include "Runtime/Sockets/Public/IPAddress.h"
 #include "Runtime/Networking/Public/Interfaces/IPv4/IPv4Address.h"
 #include "Runtime/Networking/Public/Interfaces/IPv4//IPv4Endpoint.h"
 #include "SDNetPlayerControllerProxy.h"
+#include "Runtime/Sockets/Public/SocketSubsystem.h"
+#include "Runtime/Sockets/Public/IPAddress.h"
+#include "Runtime/Sockets/Public/Sockets.h"
 
 
 void ASDNetPlayerControllerProxy::PreClientTravel(const FString & PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
 {
+	bMoveToLocation = false;
 	isTravelling = true;
 	const AActor* SCOwner = ServerCharacter->GetNetOwner();
 	ServerCharacter->ServerDestroy();
+}
+
+void ASDNetPlayerControllerProxy::Possess(APawn* InPawn)
+{
+	Super::Possess(InPawn);
+	//SpawnServerCharacter();
+	//OnServerCharLoaded();
 }
 
 bool ASDNetPlayerControllerProxy::CastSpell_Validate(ASDBaseSpell *SpellTocast, FHitResult Hit)
@@ -140,9 +152,10 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
 	TArray<FQuestStruct> QuestStructs;
 
+	discoveringTransitionLevels = 0;
 	if (HasAuthority())
 	{
-
+		LaunchTCPServer();
 		IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
 		if (OnlineSub)
 		{
@@ -183,8 +196,10 @@ void ASDNetPlayerControllerProxy::BeginPlay()
 		ServerController = PlayerProxy->GetServerController();
 	}
 
-	if (GameInstance != nullptr)
+	if (GameInstance != nullptr && !GameInstance->OnItemPickup.__Internal_IsAlreadyBound(this, &ASDNetPlayerControllerProxy::OnItemPickup, TEXT("OnItemPickup"))
+			&& !GameInstance->OnItemEquipped.__Internal_IsAlreadyBound(this, &ASDNetPlayerControllerProxy::OnItemEquipped, TEXT("OnItemEquipped")))
 	{
+		
 		GameInstance->OnItemPickup.AddDynamic(this, &ASDNetPlayerControllerProxy::OnItemPickup);
 		GameInstance->OnItemEquipped.AddDynamic(this, &ASDNetPlayerControllerProxy::OnItemEquipped);
 	}
@@ -280,6 +295,7 @@ void ASDNetPlayerControllerProxy::OnSpellSlot3Released()
 
 void ASDNetPlayerControllerProxy::MoveToLocation_Implementation(FVector target)
 {
+	discoveringTransitionLevels++;
 	if (!ServerController->MoveToLocation(target))
 	{
 		NextCommand = &ASDNetPlayerControllerProxy::MoveToLocation;
@@ -476,9 +492,15 @@ void ASDNetPlayerControllerProxy::HandleLevelLoaded()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Level loaded for controller!"));
 	AActor* SpawnAt = nullptr;
-	if (GetWorld() && isTravelling)
+	if (USDReconnectSaveGame* LoadFile = Cast<USDReconnectSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("MySaveSlot"), 0)))
 	{
-		isTravelling = false;
+		ASDPlayerState* SDPlayerState = dynamic_cast<ASDPlayerState *>(PlayerState);
+		if (SDPlayerState != nullptr) {
+			AlertServer();
+		}
+	}
+	if (GetWorld())
+	{
 		if (GetWorld()->GetAuthGameMode())
 		{
 			SpawnAt = GetWorld()->GetAuthGameMode()->ChoosePlayerStart(this);
@@ -486,9 +508,6 @@ void ASDNetPlayerControllerProxy::HandleLevelLoaded()
 			if (MyPawn != nullptr)
 			{
 				MyPawn->SetActorLocation(SpawnAt->GetActorLocation());
-				SpawnServerCharacter();
-
-				OnServerCharLoaded();
 			}
 		}
 	}
@@ -589,6 +608,12 @@ void ASDNetPlayerControllerProxy::LaunchTCPServer()
 	}
 }
 
+void ASDNetPlayerControllerProxy::PawnLeavingGame()
+{
+//	Super();
+
+}
+
 void ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(bool bToEntry, TArray <class AActor *> &ActorList)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(ToEntry: First%s)"), (bToEntry ? TEXT("True") : TEXT("False"))));
@@ -643,11 +668,6 @@ void ASDNetPlayerControllerProxy::GetSeamlessTravelActorList(bool bToEntry, TArr
 	}
 }
 
-void ASDNetPlayerControllerProxy::Possess(APawn * InPawn)
-{
-	APlayerController::Possess(InPawn);
-}
-
 void ASDNetPlayerControllerProxy::OnClosePlayerMenu()
 {
 	SetHotkeyMenuCanBeOpened(true);
@@ -693,11 +713,43 @@ void ASDNetPlayerControllerProxy::TCPSocketListener()
 		return;
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("Socket received some data!"))
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Data Bytes Read ~> %d"), ReceivedData.Num()));
 
-	const FString ReceivedUE4String = StringFromBinaryArray(ReceivedData);
+	FString ReceivedUE4String = StringFromBinaryArray(ReceivedData);
 
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("As String Data -> %s"), *ReceivedUE4String));
+// 
+// 	TCHAR* serializedChar = ReceivedUE4String.GetCharArray().GetData();
+// 	int32 sent = 0;
+// 	bool successful = ConnectionSocket->Send((uint8*)TCHAR_TO_UTF8(serializedChar), FCString::Strlen(serializedChar), sent);
+}
+
+/*
+** We need to tell the server that we are established in our new level when we travel to our own level.
+*/
+void ASDNetPlayerControllerProxy::AlertServer()
+{
+	FSocket* Socket = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(NAME_Stream, TEXT("default"), false);
+	FIPv4Address ip(127, 0, 0, 1);
+
+	TSharedRef<FInternetAddr> addr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
+	addr->SetIp(ip.Value);
+	addr->SetPort(7776);
+	bool connected = Socket->Connect(*addr);
+
+	FString TestMsg = TEXT("It's a new world!");
+	TCHAR* serializedChar = TestMsg.GetCharArray().GetData();
+	int32 sent = 0;
+	bool successful = Socket->Send((uint8*)TCHAR_TO_UTF8(serializedChar), FCString::Strlen(serializedChar), sent);
+	if (successful)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("TCP message successfully sent in ASDNetPlayerControllerProxy::AlertServer()"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Unable to send tcp message in ASDNetPlayerControllerProxy::AlertServer()"));
+	}
 }
 
 void ASDNetPlayerControllerProxy::TCPConnectionListener()
@@ -808,4 +860,16 @@ USDBaseQuest* ASDNetPlayerControllerProxy::ConvertQuestStruct(FQuestStruct Quest
 	ReturnQuest->QuestName = QuestStruct.QuestName;
 
 	return ReturnQuest;
+}
+
+void ASDNetPlayerControllerProxy::CreateReconnectSave()
+{
+	if (USDReconnectSaveGame* ReconnectSave = Cast<USDReconnectSaveGame>(UGameplayStatics::CreateSaveGameObject(USDReconnectSaveGame::StaticClass())))
+	{
+		if (GetWorld() != nullptr)
+		{
+			ReconnectSave->HostURL = GetWorld()->URL;
+		}
+		UGameplayStatics::SaveGameToSlot(ReconnectSave, ReconnectSave->SaveSlotName, 0);
+	}
 }

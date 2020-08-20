@@ -5,12 +5,14 @@
 #include "SDNetPlayerPawn.h"
 #include "SDPortal.h"
 #include "SDNetPlayerProxy.h"
+#include "SDNetPlayerControllerProxy.h"
 
 void ASDNetPlayerPawn::BeginPlay()
 {
 
 	Super::BeginPlay();
 	USDGameInstance *GameInstance = dynamic_cast<USDGameInstance *>(GetGameInstance());
+
 	if (GameInstance != nullptr)
 	{
 		if (GameInstance->GetIsOnlineSession())
@@ -66,7 +68,12 @@ bool ASDNetPlayerPawn::TravelToLevel_Validate(FName LevelToLoad)
 void ASDNetPlayerPawn::TravelToLevel_Implementation(FName LevelToLoad)
 {
 	ASDPortal* InteractionPortal = dynamic_cast<ASDPortal*>(InteractionTarget);
-	APlayerController* ProxyController = dynamic_cast<APlayerController*>(Instigator->Controller);
+
+	ASDNetPlayerControllerProxy* ProxyController = dynamic_cast<ASDNetPlayerControllerProxy*>(GetOwner());
+	if (ProxyController != nullptr)
+	{
+		ProxyController->CreateReconnectSave();
+	}
 
 	if (HasAuthority())
 	{
@@ -90,7 +97,7 @@ void ASDNetPlayerPawn::TravelToLevel_Implementation(FName LevelToLoad)
 			if(ProxyController->GetNetConnection() != nullptr)
 				SetPortalTarget(ProxyController->GetNetConnection()->URL.ToString(), InteractionPortal);
 		}
-		ProxyController->ClientTravel(LevelToLoad.ToString(), ETravelType::TRAVEL_Absolute);
+		ProxyController->ClientTravel(LevelToLoad.ToString(), ETravelType::TRAVEL_Relative, true);
 	}
 }
 

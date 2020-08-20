@@ -1,0 +1,12 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "SoulDrive2.h"
+#include "SDReconnectSaveGame.h"
+
+
+
+
+USDReconnectSaveGame::USDReconnectSaveGame()
+{
+	SaveSlotName = TEXT("MySaveSlot");
+}
