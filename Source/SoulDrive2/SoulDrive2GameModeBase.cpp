@@ -331,7 +331,7 @@ uint8 ASoulDrive2GameModeBase::GetEdgeMapIndex(ProceduralTileEdges inEdge, TArra
 
 ProceduralTileEdges ASoulDrive2GameModeBase::GetFacingEdge(int direction, FTileDescriptor* Desc)
 {
-	direction -= Desc->rotation;
+	direction -= Desc->Rotation;
 	direction = (direction + 360) % 360;
 	switch (direction)
 	{
@@ -360,7 +360,7 @@ void ASoulDrive2GameModeBase::CopyDescriptorData(FTileDescriptor* CopyFrom, FTil
 	CopyTo->RightEdge = CopyFrom->RightEdge;
 	CopyTo->BottomEdge = CopyFrom->BottomEdge;
 	CopyTo->LeftEdge = CopyFrom->LeftEdge;
-	CopyTo->rotation = CopyFrom->rotation;
+	CopyTo->Rotation = CopyFrom->Rotation;
 }
 
 TArray<FTileDescriptor *> ASoulDrive2GameModeBase::isValidForNeighbors(TArray<ProceduralTileEdges> neighbors, FTileDescriptor* TileToAdd, TArray<FEdgeAlignmentPair> & EdgeMap)
@@ -378,7 +378,7 @@ TArray<FTileDescriptor *> ASoulDrive2GameModeBase::isValidForNeighbors(TArray<Pr
 		acceptedEdgesCount = 0;
 		NextPermutation = new FTileDescriptor();
 		CopyDescriptorData(TileToAdd, NextPermutation);
-		NextPermutation->rotation = i * 90;
+		NextPermutation->Rotation = i * 90;
 		// For each rotation, check all of my sides with the candidate neighbors
 		for (int j = 0; j < 4; j++)
 		{
@@ -747,7 +747,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 			if (RoomCorners[i].name == FName("Corner_Convex"))
 			{
 				StraightWallCount++;
-				if (RoomCorners[i].rotation == 0)
+				if (RoomCorners[i].Rotation == 0)
 				{
 					// this should put our corner piece in the bottom left corner of the tile, with our tiles having their walls on the right, and being offset one
 					// tile width to the left of our current position
@@ -761,7 +761,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					}
 
 				}
-				else if (RoomCorners[i].rotation == 90)
+				else if (RoomCorners[i].Rotation == 90)
 				{
 					// walls here are up 1 tile and leading off to the right.
 					for (int j = 0; j < StraightWallCount; j++)
@@ -773,7 +773,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
-				else if (RoomCorners[i].rotation == 180)
+				else if (RoomCorners[i].Rotation == 180)
 				{
 					// walls here are up 1 t ile and leading off to the left.
 					for (int j = 0; j < StraightWallCount; j++)
@@ -785,7 +785,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
-				else if (RoomCorners[i].rotation == 270)
+				else if (RoomCorners[i].Rotation == 270)
 				{
 					// walls here are going up and are 1 to the right
 					for (int j = 0; j < StraightWallCount; j++)
@@ -800,7 +800,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 			}
 			else if (RoomCorners[i].name == FName("Corner_Concave"))
 			{
-				if (RoomCorners[i].rotation == 0)
+				if (RoomCorners[i].Rotation == 0)
 				{
 					for (int j = 0; j < StraightWallCount; j++)
 					{
@@ -811,7 +811,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
-				else if (RoomCorners[i].rotation == 90)
+				else if (RoomCorners[i].Rotation == 90)
 				{
 					for (int j = 0; j < StraightWallCount; j++)
 					{
@@ -822,7 +822,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
-				else if (RoomCorners[i].rotation == 180)
+				else if (RoomCorners[i].Rotation == 180)
 				{
 					for (int j = 0; j < StraightWallCount; j++)
 					{
@@ -833,7 +833,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
-				else if (RoomCorners[i].rotation == 270)
+				else if (RoomCorners[i].Rotation == 270)
 				{
 					for (int j = 0; j < StraightWallCount; j++)
 					{

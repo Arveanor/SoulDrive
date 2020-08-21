@@ -117,7 +117,10 @@ struct FTileDescriptor
 	uint8 LocalId;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int rotation;
+	FIntPoint Location;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int Rotation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ProceduralTileEdges TopEdge;
@@ -131,16 +134,13 @@ struct FTileDescriptor
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ProceduralTileEdges BottomEdge;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FIntPoint Location;
-
 	FTileDescriptor() { };
 
 	FTileDescriptor(FName& inName, uint8 inLocalId, int inRotation, FIntPoint inLocation)
 	{
 		name = inName;
 		LocalId = inLocalId;
-		rotation = inRotation;
+		Rotation = inRotation;
 		Location = inLocation;
 	}
 
