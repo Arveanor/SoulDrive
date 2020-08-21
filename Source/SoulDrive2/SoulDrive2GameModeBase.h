@@ -18,10 +18,41 @@ enum class ProceduralTileEdges : uint8 {
 	Wall_Mid
 };
 
+
+/*
+** Describe a room to be placed, with an FIntPoint to define each corner, in clockwise order from the Minimum corner. Additionally may be used to contain info
+** on the rooms visual and gameplay elements.
+*/
+USTRUCT(BlueprintType)
+struct FRoomDescriptor {
+	GENERATED_USTRUCT_BODY()
+
+	public:
+	UPROPERTY()
+	TArray<FIntPoint> OrderedRoomCorners;
+
+	FRoomDescriptor() {}
+};
+
+/*
+** We may need to track things here like FNames of Room Descriptors, or where exactly the openings are, or we may want to use a struct that only defines the
+** array of points, that gets extended for the full room functionality, lot of this is TBD.
+*/
+USTRUCT(BlueprintType)
+struct FHallwayDescriptor {
+	GENERATED_USTRUCT_BODY()
+
+	public:
+	UPROPERTY()
+	TArray<FIntPoint> OrderedHallCorners;
+
+	FHallwayDescriptor() {}
+};
+
 USTRUCT(BlueprintType)
 struct FTileEdgesTable : public FTableRowBase {
 	GENERATED_BODY()
-	
+
 	UPROPERTY()
 	FName TileName;
 
@@ -41,13 +72,13 @@ struct FTileEdgesTable : public FTableRowBase {
 	uint8 LocalId;
 
 	FTileEdgesTable() {}
-	
+
 };
 
 USTRUCT(BlueprintType)
 struct FEdgeRelationshipTable : public FTableRowBase {
 	GENERATED_BODY()
-	
+
 	UPROPERTY()
 	FName EdgeName;
 
@@ -60,7 +91,7 @@ struct FEdgeRelationshipTable : public FTableRowBase {
 USTRUCT(BlueprintType)
 struct FIntPair {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	uint8 Key;
 
@@ -78,7 +109,7 @@ USTRUCT(BlueprintType)
 struct FTileDescriptor
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName name;
 
@@ -100,20 +131,33 @@ struct FTileDescriptor
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ProceduralTileEdges BottomEdge;
 
-	FTileDescriptor()
-		: name(TEXT("EmptySpace")), LocalId(0), rotation(0), TopEdge(ProceduralTileEdges::Open), RightEdge(ProceduralTileEdges::Open), BottomEdge(ProceduralTileEdges::Open), LeftEdge(ProceduralTileEdges::Open)
-	{ }
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FIntPoint Location;
 
-	FTileDescriptor(FName& inName, uint8 LocalId, int inRotation, ProceduralTileEdges InTopEdge, ProceduralTileEdges InRightEdge, ProceduralTileEdges InBottomEdge, ProceduralTileEdges InLeftEdge)
-		: name(inName), rotation(inRotation), TopEdge(InTopEdge), RightEdge(InRightEdge), BottomEdge(InBottomEdge), LeftEdge(InLeftEdge)
-	{ }
+	FTileDescriptor() { };
+
+	FTileDescriptor(FName& inName, uint8 inLocalId, int inRotation, FIntPoint inLocation)
+	{
+		name = inName;
+		LocalId = inLocalId;
+		rotation = inRotation;
+		Location = inLocation;
+	}
+
+	// 	FTileDescriptor()
+	// 		: name(TEXT("EmptySpace")), LocalId(0), rotation(0), TopEdge(ProceduralTileEdges::Open), RightEdge(ProceduralTileEdges::Open), BottomEdge(ProceduralTileEdges::Open), LeftEdge(ProceduralTileEdges::Open)
+	// 	{ }
+	// 
+	// 	FTileDescriptor(FName& inName, uint8 LocalId, int inRotation, ProceduralTileEdges InTopEdge, ProceduralTileEdges InRightEdge, ProceduralTileEdges InBottomEdge, ProceduralTileEdges InLeftEdge)
+	// 		: name(inName), rotation(inRotation), TopEdge(InTopEdge), RightEdge(InRightEdge), BottomEdge(InBottomEdge), LeftEdge(InLeftEdge)
+	// 	{ }
 };
 
 USTRUCT(BlueprintType)
 struct FTileArray
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
 	TArray<ASDTileDescriptor*> TileArray;
 
@@ -164,7 +208,7 @@ struct FMapGenerationParams
 };
 
 /**
- * 
+ *
  */
 UCLASS()
 class SOULDRIVE2_API ASoulDrive2GameModeBase : public AGameModeBase
@@ -179,6 +223,8 @@ public:
 
 	ASoulDrive2GameModeBase();
 
+	UPROPERTY(BlueprintReadWrite)
+	int TileSize;
 
 	template <typename EnumType>
 	static FORCEINLINE EnumType GetEnumValueFromString(const FString& EnumName, const FString& String)
@@ -216,19 +262,16 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetLevelActive(bool IsLoaded);
 
-	/****************************************************************************/
-	/* Generates a list of ints representing the tiles to be loaded on a map.   
-	** The list is 1 dimensional and must be mapped back to 2d space by the 
-	** caller.
-	** TileList is the output list containing all the tile references.
-	** Params is a struct containing all of the necessary data about placeable
-	** tiles and their relationships.                                           */
-	/****************************************************************************/
-	UFUNCTION(BlueprintCallable, Category = "Levels")
-	int GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileList, UPARAM(ref) TArray<FIntPair> &ActorLocations, FMapGenerationParams Params);
-
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevelActors(const TArray< TSubclassOf<AActor> > &LevelList, int MapTileCountX, int MapTileCountY);
+
+	/*
+	** Driver function to get locational data for map layouts. Room and Hallway Descriptors will be used to return data that the caller can use to actually spawn
+	** actors in that represent the data generated here. Expected to typically be called from each level blueprint on its own.
+	** returns an int to indicate success or a specific failure code.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Levels")
+	int GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileDescriptors);
 
 	// Called when a level finishes loading to spawn the actual player character and possess it over the dummy loading actor
 	UFUNCTION(BlueprintCallable, Category = "Player")
@@ -236,6 +279,14 @@ public:
 
 	int IndexFromPoint(int x, int y, int maxX, int maxY);
 private:
+	const uint32 MINIMUM_LEAF_QUAD_SIZE = 100;
+	const uint32 MINIMUM_STEM_QUAD_SIZE = 800;
+	const uint8 MAXIMUM_QUAD_DEPTH = 3;
+	const uint32 MINIMUM_ROOM_DIMENSIONS = 2;
+	// How many cutouts do we want from our room? each index in this array should map to the number of cutouts to use, so if our weighted random technique gets a '1'
+	// we want to use a single cutout. Note that '0' is expected to be valid, because of course we want some rooms that really are rectangles.
+	const static TArray<uint16> NUMBER_OF_ROOM_CUTOUT_WEIGHTS;
+
 	int32 GetListKeyByIndex(TDoubleLinkedList<int32> &List, int32 Index);
 
 	/*
@@ -259,11 +310,35 @@ private:
 	void constructEdgeMap(TArray<FEdgeAlignmentPair> &EdgeMap);
 	void constructTileSet(TArray<FTileDescriptor> &TileSet, UDataTable* TileData);
 
+	/*
+	** Make quads in a quadtree so that we can put rooms in them. All quads will be built with relative location values and then transformed by the Offset vector.
+	** MapDimensions should be given as the size in number of tiles.
+	*/
+	void MakeQuads(FRandomStream RandomStream, FIntPoint MapDimensions, FVector Offset, uint8 RecursionCounter = 0);
+
+	/*
+	** Helper function to define a single quad when making all quads.
+	*/
+	FBox MakeQuad(uint8 Id, FIntPoint Slices, FIntPoint MapDimensions, FIntPoint MapOrigin);
+
+	/*
+	** Assign room dimensions within each quad.
+	*/
+	TArray<FRoomDescriptor> MakeRoomsInQuads(FRandomStream RandomStream);
+	TArray<FHallwayDescriptor> MakeHallways(FRandomStream RandomStream);
+	void BuildTileLocationsList(TArray<FRoomDescriptor> Rooms, TArray<FHallwayDescriptor> Hallways, TArray<FTileDescriptor> &TileDescriptors);
+
+
+
 	UDataTable* EdgeMapData;
-	
+
+	UPROPERTY()
+	TArray<FBox> StemQuads;
+	TArray<FBox> LeafQuads;
+
 	UPROPERTY()
 	bool IsLevelActive;
 
 protected:
- 	void PostLogin(APlayerController* NewPlayer) override;
+	void PostLogin(APlayerController* NewPlayer) override;
 };
