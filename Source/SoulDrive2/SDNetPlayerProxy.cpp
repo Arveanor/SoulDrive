@@ -24,9 +24,9 @@ ASDNetPlayerProxy::ASDNetPlayerProxy(const class FObjectInitializer& FOI)
 	// Create a camera boom...
 	MainCameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	MainCameraBoom->SetupAttachment(RootComponent);
-	MainCameraBoom->bAbsoluteRotation = true; // Don't want arm to rotate when character does
+	MainCameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when character does
 	MainCameraBoom->TargetArmLength = 2800.f;
-	MainCameraBoom->RelativeRotation = FRotator(-60.f, 0.f, 0.f);
+	MainCameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
 	MainCameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 
 	// Create a camera...

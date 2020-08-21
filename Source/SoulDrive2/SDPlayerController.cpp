@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "SoulDrive2.h"
+#include "NavigationSystem.h"
 #include "SDPlayerController.h"
 
 
@@ -153,7 +154,7 @@ void ASDPlayerController::OnClosePlayerMenu()
 
 void ASDPlayerController::RequestMoveToLocation_Implementation(AController *TargetController, const FVector &Goal)
 {
-	UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
+	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
 	NavSys->SimpleMoveToLocation(TargetController, Goal);
 }
 

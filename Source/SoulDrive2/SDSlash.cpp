@@ -25,7 +25,6 @@ void ASDSlash::CastSpell(FVector target)
 
 		FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
 		TraceParams.bTraceComplex = true;
-		TraceParams.bTraceAsyncScene = true;
 		TraceParams.bReturnPhysicalMaterial = false;
 		TraceParams.TraceTag = TraceTag;
 

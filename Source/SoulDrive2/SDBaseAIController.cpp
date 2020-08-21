@@ -12,19 +12,19 @@ ASDBaseAIController::ASDBaseAIController(const FObjectInitializer &FOI)
 	BehaviorComp = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("Behavior Component"));
 }
 
-void ASDBaseAIController::Possess(class APawn *InPawn)
-{
-	Super::Possess(InPawn);
-	ASDBaseAICharacter* Bot = Cast<ASDBaseAICharacter>(InPawn);
-	if (Bot != nullptr && Bot->BotBehavior != nullptr)
-	{
-		BlackboardComp->InitializeBlackboard(*(Bot->BotBehavior->BlackboardAsset));
-		EnemyKeyID = BlackboardComp->GetKeyID("TargetEnemy");
-		EnemyLocationID = BlackboardComp->GetKeyID("Destination");
-
-		BehaviorComp->StartTree(*(Bot->BotBehavior));
-	}
-}
+// void ASDBaseAIController::Possess(class APawn *InPawn)
+// {
+// 	Super::Possess(InPawn);
+// 	ASDBaseAICharacter* Bot = Cast<ASDBaseAICharacter>(InPawn);
+// 	if (Bot != nullptr && Bot->BotBehavior != nullptr)
+// 	{
+// 		BlackboardComp->InitializeBlackboard(*(Bot->BotBehavior->BlackboardAsset));
+// 		EnemyKeyID = BlackboardComp->GetKeyID("TargetEnemy");
+// 		EnemyLocationID = BlackboardComp->GetKeyID("Destination");
+// 
+// 		BehaviorComp->StartTree(*(Bot->BotBehavior));
+// 	}
+// }
 
 void ASDBaseAIController::setEnemy(APawn * InPawn)
 {

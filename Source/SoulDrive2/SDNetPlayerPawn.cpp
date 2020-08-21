@@ -82,7 +82,7 @@ void ASDNetPlayerPawn::TravelToLevel_Implementation(FName LevelToLoad)
 			if (ProxyController != nullptr)
 			{
 				uint8 owningId;
-				ASDNetPlayerProxy* ProxyPawn = dynamic_cast<ASDNetPlayerProxy*>(ProxyController->GetControlledPawn());
+				ASDNetPlayerProxy* ProxyPawn = dynamic_cast<ASDNetPlayerProxy*>(ProxyController->GetPawn());
 				if (ProxyPawn != nullptr)
 				{
 					owningId = ProxyPawn->GetPlayerId();

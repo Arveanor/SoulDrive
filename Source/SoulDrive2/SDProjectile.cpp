@@ -12,7 +12,7 @@ ASDProjectile::ASDProjectile(const class FObjectInitializer& FOI)
 
 	bReplicates = true;
 	bAlwaysRelevant = true;
-	bReplicateMovement = true;
+	SetReplicatingMovement(true);
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
 

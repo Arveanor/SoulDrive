@@ -25,7 +25,7 @@ class SOULDRIVE2_API ASDBaseAIController : public AAIController
 
 public:
 
- 	virtual void Possess(class APawn *InPawn) override;
+ 	//virtual void Possess(class APawn *InPawn) override;
  	void setEnemy(class APawn *InPawn);
  
 	UFUNCTION(BlueprintCallable, Category = Behavior)

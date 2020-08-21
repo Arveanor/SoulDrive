@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "SoulDrive2.h"
-#include "AI/Navigation/NavigationSystem.h"
 #include "Runtime/Engine/Classes/Engine/LevelStreaming.h"
 #include "SDNetPlayerProxy.h"
 #include "SDNetPlayerControllerProxy.h"

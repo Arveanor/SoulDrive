@@ -18,7 +18,6 @@ public:
 	// Sets default values for this character's properties
 	ASDBaseAICharacter();
 
-	UFUNCTION(BlueprintCallable, Category = "Spells")
 	virtual void CastSpell(FName SpellName, FVector AimedAt) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Spells")

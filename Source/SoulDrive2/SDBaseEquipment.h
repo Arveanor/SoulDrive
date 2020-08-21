@@ -4,6 +4,7 @@
 
 #include "GameFramework/Actor.h"
 #include "SDStatSheet.h"
+#include "SDConstants.h"
 #include "SDBaseEquipment.generated.h"
 
 UENUM(BlueprintType)

@@ -13,6 +13,8 @@
 #include "Runtime/Networking/Public/Interfaces/IPv4/IPv4Address.h"
 #include "Runtime/Networking/Public/Interfaces/IPv4//IPv4Endpoint.h"
 #include "SDNetPlayerControllerProxy.h"
+#include "SDClickable.h"
+#include "SDInventoryWidget.h"
 #include "Runtime/Sockets/Public/SocketSubsystem.h"
 #include "Runtime/Sockets/Public/IPAddress.h"
 #include "Runtime/Sockets/Public/Sockets.h"
@@ -24,13 +26,6 @@ void ASDNetPlayerControllerProxy::PreClientTravel(const FString & PendingURL, ET
 	isTravelling = true;
 	const AActor* SCOwner = ServerCharacter->GetNetOwner();
 	ServerCharacter->ServerDestroy();
-}
-
-void ASDNetPlayerControllerProxy::Possess(APawn* InPawn)
-{
-	Super::Possess(InPawn);
-	//SpawnServerCharacter();
-	//OnServerCharLoaded();
 }
 
 bool ASDNetPlayerControllerProxy::CastSpell_Validate(ASDBaseSpell *SpellTocast, FHitResult Hit)

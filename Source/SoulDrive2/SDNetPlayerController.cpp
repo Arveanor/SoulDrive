@@ -2,6 +2,7 @@
 
 #include "SoulDrive2.h"
 #include "SDNetPlayerController.h"
+#include "NavigationSystem.h"
 #include "SDNetPlayerPawn.h"
 
 ASDNetPlayerController::ASDNetPlayerController()
@@ -14,7 +15,8 @@ bool ASDNetPlayerController::MoveToLocation(FVector &Goal)
 {
 	if (GetWorld() != nullptr)
 	{
-		UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
+		UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+		//UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
 		ASDNetPlayerPawn* ControlledPawn = dynamic_cast<ASDNetPlayerPawn *>(GetPawn());
 		if (ControlledPawn != nullptr && !ControlledPawn->IsCasting())
 		{

@@ -165,7 +165,7 @@ public:
 	TSubclassOf<ASDNetPlayerController> NetControllerClass;
 
 	virtual void GetSeamlessTravelActorList(bool bToEntry, TArray <class AActor *> &ActorList) override;
-	virtual void Possess(APawn* InPawn) override;
+	/*virtual void Possess(APawn* InPawn) override;*/
 
 	void OnClosePlayerMenu();
 	void OnCloseMpMenu();
