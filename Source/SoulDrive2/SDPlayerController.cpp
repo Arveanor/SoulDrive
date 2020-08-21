@@ -2,6 +2,7 @@
 
 #include "SoulDrive2.h"
 #include "NavigationSystem.h"
+#include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "SDPlayerController.h"
 
 
@@ -155,6 +156,7 @@ void ASDPlayerController::OnClosePlayerMenu()
 void ASDPlayerController::RequestMoveToLocation_Implementation(AController *TargetController, const FVector &Goal)
 {
 	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	UAIBlueprintHelperLibrary::SimpleMoveToLocation(TargetController, Goal);
 	NavSys->SimpleMoveToLocation(TargetController, Goal);
 }
 
