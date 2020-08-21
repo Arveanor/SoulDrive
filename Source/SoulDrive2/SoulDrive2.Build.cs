@@ -4,7 +4,7 @@ using UnrealBuildTool;
 
 public class SoulDrive2 : ModuleRules
 {
-	public SoulDrive2(TargetInfo Target)
+	public SoulDrive2(ReadOnlyTargetRules Target) : base (Target)
 	{
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "UMG", "Slate", "SlateCore", "Networking", "Sockets" });
 
