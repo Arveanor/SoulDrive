@@ -46,7 +46,7 @@ AActor* ASoulDrive2GameModeBase::ChoosePlayerStart_Implementation(AController* P
 
 ASoulDrive2GameModeBase::ASoulDrive2GameModeBase()
 {
-	TileSize = 400;
+	TileSize = 500;
 	static ConstructorHelpers::FObjectFinder<UDataTable> temp(TEXT("DataTable'/Game/SDContent/Levels/InstancedSMLevel/EdgeData_1.EdgeData_1'"));
 	EdgeMapData = temp.Object;
 	IsLevelActive = false;
@@ -573,6 +573,8 @@ TArray<FRoomDescriptor> ASoulDrive2GameModeBase::MakeRoomsInQuads(FRandomStream 
 	// loop through the list of leaves and create a room size and shape.
 	for (FBox Box : LeafQuads)
 	{
+		if (DEBUG_ROOM_LIMIT <= 0) break;
+		DEBUG_ROOM_LIMIT--;
 		FIntPoint RoomExtent = FIntPoint(RandomStream.FRandRange(MINIMUM_ROOM_DIMENSIONS, Box.GetSize().X),
 			RandomStream.FRandRange(MINIMUM_ROOM_DIMENSIONS, Box.GetSize().Y)) * TileSize;
 
@@ -644,7 +646,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 		TArray<FTileDescriptor> WallDescriptors; // Necessary so that I can loop through corners without adding walls to the full list until I'm done.
 		TArray<FTileDescriptor> RoomCorners; // Similar to above, store all of the rooms corner tiles in their own array temporarily so we can iterate properly.
 
-		for (int i = 1; i < Room.OrderedRoomCorners.Num(); i++)
+		for (int i = 0; i < Room.OrderedRoomCorners.Num(); i++)
 		{
 			Curr = Room.OrderedRoomCorners[i];
 			Next = (Room.OrderedRoomCorners.Num() - 1 == i) ? Room.OrderedRoomCorners[0] : Room.OrderedRoomCorners[i + 1];
@@ -669,7 +671,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					// the actual "corner" tile will have it's corner in the bottom right here.
 					int Id = 1;
 					int rotation = 0;
-					FName TileName = FName("Corner_Concave");
+					FName TileName = FName("Corner_Convex");
 					RoomCorners.Emplace(TileName, Id, rotation, Curr);
 				}
 			}
@@ -687,7 +689,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 				{
 					// outward corner, walls are on top and right side
 					int Id = 1;
-					int rotation = 0;
+					int rotation = 180;
 					FName TileName = FName("Corner_Concave");
 					RoomCorners.Emplace(TileName, Id, rotation, Curr);
 				}
@@ -706,7 +708,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 				{
 					// outward corner, walls are on the top and left.
 					int Id = 1;
-					int rotation = 0;
+					int rotation = 90;
 					FName TileName = FName("Corner_Concave");
 					RoomCorners.Emplace(TileName, Id, rotation, Curr);
 				}
@@ -717,7 +719,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 				{
 					// outward corner, walls are on the bottom and right
 					int Id = 1;
-					int rotation = 0;
+					int rotation = 270;
 					FName TileName = FName("Corner_Concave");
 					RoomCorners.Emplace(TileName, Id, rotation, Curr);
 				}
