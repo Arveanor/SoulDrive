@@ -219,6 +219,7 @@ class SOULDRIVE2_API ASoulDrive2GameModeBase : public AGameModeBase
 
 
 public:
+	int DEBUG_ROOM_LIMIT = 1; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
 	TArray<AActor*> playerStartArray;
 
 	ASoulDrive2GameModeBase();
