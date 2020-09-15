@@ -219,7 +219,7 @@ class SOULDRIVE2_API ASoulDrive2GameModeBase : public AGameModeBase
 
 
 public:
-	int DEBUG_ROOM_LIMIT = 1; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
+	int DEBUG_ROOM_LIMIT = 103; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
 	TArray<AActor*> playerStartArray;
 
 	ASoulDrive2GameModeBase();
@@ -280,9 +280,9 @@ public:
 
 	int IndexFromPoint(int x, int y, int maxX, int maxY);
 private:
-	const uint32 MINIMUM_LEAF_QUAD_SIZE = 100;
+	const uint32 MINIMUM_LEAF_QUAD_SIZE = 1;
 	const uint32 MINIMUM_STEM_QUAD_SIZE = 800;
-	const uint8 MAXIMUM_QUAD_DEPTH = 3;
+	const uint8 MAXIMUM_QUAD_DEPTH = 1;
 	const uint32 MINIMUM_ROOM_DIMENSIONS = 2;
 	// How many cutouts do we want from our room? each index in this array should map to the number of cutouts to use, so if our weighted random technique gets a '1'
 	// we want to use a single cutout. Note that '0' is expected to be valid, because of course we want some rooms that really are rectangles.
