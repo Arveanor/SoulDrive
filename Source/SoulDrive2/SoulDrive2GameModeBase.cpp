@@ -65,7 +65,7 @@ void ASoulDrive2GameModeBase::SetLevelActive(bool IsActive)
 int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileDescriptors)
 {
 	FRandomStream RandomStream = FRandomStream(2343);
-	MakeQuads(RandomStream, FIntPoint(50, 50), FVector(8000, 8000, 0));
+	MakeQuads(RandomStream, FIntPoint(50, 50), FVector(0, 0, 0));
 	TArray<FRoomDescriptor> RoomDescriptors;
 	TArray<FHallwayDescriptor> HallwayDescriptors;
 	RoomDescriptors = MakeRoomsInQuads(RandomStream);
@@ -454,8 +454,8 @@ void ASoulDrive2GameModeBase::MakeQuads(FRandomStream RandomStream, FIntPoint Ma
 	FIntPoint Slices = FIntPoint::FIntPoint(RandomStream.FRandRange(0, MapDimensions.X), RandomStream.FRandRange(0, MapDimensions.Y));
 	FBox NewQuad;
 	FColor DebugColor;
-	// 	DrawDebugLine(GetWorld(), Offset + FVector(Slices.X, 0, 0), Offset + FVector(Slices.X, MapDimensions.Y, 0), FColor::Red, true, 990.f, 2.f);
-	// 	DrawDebugLine(GetWorld(), Offset + FVector(0, Slices.Y, 0), Offset + FVector(MapDimensions.X, Slices.Y, 0), FColor::Blue, true, 990.f, 2.f);
+	DrawDebugLine(GetWorld(), Offset + FVector(Slices.X, 0, 0), Offset + FVector(Slices.X, MapDimensions.Y, 0), FColor::Red, true, 990.f, 2.f);
+	DrawDebugLine(GetWorld(), Offset + FVector(0, Slices.Y, 0), Offset + FVector(MapDimensions.X, Slices.Y, 0), FColor::Blue, true, 990.f, 2.f);
 
 	switch (RecursionCounter)
 	{
@@ -491,29 +491,30 @@ void ASoulDrive2GameModeBase::MakeQuads(FRandomStream RandomStream, FIntPoint Ma
 		// 		}
 		NewQuad = MakeQuad(i, Slices, MapDimensions, FIntPoint(Offset.X, Offset.Y));
 		NewQuad = NewQuad.ShiftBy(Offset);
-		// 		switch (RecursionCounter)
-		// 		{
-		// 		case 0:
-		// 			DrawDebugBox(GetWorld(), FVector(NewQuad.GetCenter().X, NewQuad.GetCenter().Y, 0), NewQuad.GetSize() / 2, DebugColor, true, 990, 0, 20.f);
-		// 			break;
-		// 		case 1:
-		// 			DrawDebugBox(GetWorld(), FVector(NewQuad.GetCenter().X, NewQuad.GetCenter().Y, 100), NewQuad.GetSize() / 2, DebugColor, true, 990, 0, 20.f);
-		// 			break;
-		// 		case 2:
-		// 			DrawDebugBox(GetWorld(), FVector(NewQuad.GetCenter().X, NewQuad.GetCenter().Y, 200), NewQuad.GetSize() / 2, DebugColor, true, 990, 0, 20.f);
-		// 			break;
-		// 		case 3:
-		// 			DrawDebugBox(GetWorld(), FVector(NewQuad.GetCenter().X, NewQuad.GetCenter().Y, 300), NewQuad.GetSize() / 2, DebugColor, true, 990, 0, 20.f);
-		// 			break;
-		// 		}
+		switch (RecursionCounter)
+		{
+		case 0:
+			DrawDebugBox(GetWorld(), FVector(NewQuad.GetCenter().X, NewQuad.GetCenter().Y, 0), NewQuad.GetSize() / 2, DebugColor, true, 990, 0, 20.f);
+			break;
+// 		case 1:
+// 			DrawDebugBox(GetWorld(), FVector(NewQuad.GetCenter().X, NewQuad.GetCenter().Y, 100), NewQuad.GetSize() / 2, DebugColor, true, 990, 0, 20.f);
+// 			break;
+// 		case 2:
+// 			DrawDebugBox(GetWorld(), FVector(NewQuad.GetCenter().X, NewQuad.GetCenter().Y, 200), NewQuad.GetSize() / 2, DebugColor, true, 990, 0, 20.f);
+// 			break;
+// 		case 3:
+// 			DrawDebugBox(GetWorld(), FVector(NewQuad.GetCenter().X, NewQuad.GetCenter().Y, 300), NewQuad.GetSize() / 2, DebugColor, true, 990, 0, 20.f);
+// 			break;
+		}
 
 		if (/*NewQuad.GetSize().GetMax() < MINIMUM_STEM_QUAD_SIZE ||*/ RecursionCounter >= MAXIMUM_QUAD_DEPTH)
 		{
 			// if we get a super tiny leaf, we are just going to drop it
-// 			if (NewQuad.GetSize().GetMin() > MINIMUM_LEAF_QUAD_SIZE)
-// 			{
-			LeafQuads.Add(NewQuad);
-			// 			}
+			FVector2D QuadSize = FVector2D(NewQuad.GetSize());
+ 			if (QuadSize.GetMin() >= MINIMUM_LEAF_QUAD_SIZE)
+ 			{
+				LeafQuads.Add(NewQuad);
+ 			}
 		}
 		else
 		{
@@ -582,6 +583,11 @@ TArray<FRoomDescriptor> ASoulDrive2GameModeBase::MakeRoomsInQuads(FRandomStream 
 		// The origin here refers to the bottom left corner, which would be the "Min" vector from an fbox
 		FIntPoint RoomOrigin = FIntPoint(RandomStream.FRandRange(0, Box.GetSize().X * TileSize - RoomExtent.X),
 			RandomStream.FRandRange(0, Box.GetSize().Y * TileSize - RoomExtent.Y));
+		RoomOrigin.X += Box.Min.X * TileSize;
+		RoomOrigin.Y += Box.Min.Y * TileSize;
+		UE_LOG(LogTemp, Warning, TEXT("FBox: %s"), *Box.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("Room Origin at %d, %d"), RoomOrigin.X, RoomOrigin.Y);
+		UE_LOG(LogTemp, Warning, TEXT("Room Extent is %d, %d"), RoomExtent.X, RoomExtent.Y);
 
 		// rectangle rooms are boring, let's choose a number of cutouts at random, then choose the location and size of those cutouts at random.
 		// may want to limit the amount of area we cutout to a percentage of the boxes whole area, and we certainly don't want any cutouts to be the 
@@ -607,10 +613,11 @@ TArray<FRoomDescriptor> ASoulDrive2GameModeBase::MakeRoomsInQuads(FRandomStream 
 		// Once we know all of our cutouts, we can (somehow!) construct a list of corners.
 		// This will likely turn into a bunch of special cases, but for now we can just create 4 points in order.
 		RoomDescriptor = FRoomDescriptor();
-		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin);
-		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin + FIntPoint(0, RoomExtent.Y));
-		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin + RoomExtent);
+		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin + FIntPoint(TileSize, 0));
 		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin + FIntPoint(RoomExtent.X, 0));
+		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin + RoomExtent - FIntPoint(0, TileSize));
+		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin + FIntPoint(TileSize, RoomExtent.Y - TileSize));
+
 		Results.Add(RoomDescriptor);
 	}
 	return Results;
@@ -641,6 +648,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 	{
 		FIntPoint Prev;
 		FIntPoint Curr;
+		FIntPoint AdjustedLocation;
 		FIntPoint Next;
 		uint8 StraightWallCount;
 		TArray<FTileDescriptor> WallDescriptors; // Necessary so that I can loop through corners without adding walls to the full list until I'm done.
@@ -651,33 +659,46 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 			Curr = Room.OrderedRoomCorners[i];
 			Next = (Room.OrderedRoomCorners.Num() - 1 == i) ? Room.OrderedRoomCorners[0] : Room.OrderedRoomCorners[i + 1];
 			Prev = (i == 0) ? Room.OrderedRoomCorners[Room.OrderedRoomCorners.Num() - 1] : Room.OrderedRoomCorners[i - 1];
+			AdjustedLocation.X = Curr.X;
+			AdjustedLocation.Y = Curr.Y;
 			// this loop can only give us inward and outward corners, but we can assume straight wall border pieces between each point, and we'll need
 			// to reference tilesize to place the internal (non border) tiles.
-			// since we are moving clockwise around the room, we know that if our current corners x is smaller than previous x, a decrease in y moving to next y
-			// means that this is an inward corner, if y increases, it's an outward corner.
+			
+			// unreal has a flipped x axis, so if prev.x is smaller than curr.x than prev.x is to the right of curr.x
+			// prev is to the left of curr
 			if (Curr.X < Prev.X)
 			{
 				if (Curr.Y < Next.Y)
-				{
-					// outward corner, walls on bottom and left side of tile
-					int Id = 1;
-					int rotation = 0;
-					FName TileName = FName("Corner_Concave");
-					RoomCorners.Emplace(TileName, Id, rotation, Curr);
-				}
-				else
 				{
 					// inward corner, this is actually comprised of 3 different tiles, only one of which has the corner, the other two are walls on a single side.
 					// the actual "corner" tile will have it's corner in the bottom right here.
 					int Id = 1;
 					int rotation = 0;
 					FName TileName = FName("Corner_Convex");
-					RoomCorners.Emplace(TileName, Id, rotation, Curr);
+					RoomCorners.Emplace(TileName, Id, rotation, AdjustedLocation);
+				}
+				else
+				{
+					// outward corner, walls on top and right side of tile
+					int Id = 1;
+					int rotation = 90;
+					FName TileName = FName("Corner_Concave");
+					AdjustedLocation.X += TileSize;
+					RoomCorners.Emplace(TileName, Id, rotation, AdjustedLocation);
 				}
 			}
-			else if (Curr.X > Prev.X)
+			else if (Curr.X > Prev.X) // prev is to the right of curr
 			{
 				if (Curr.Y < Next.Y)
+				{
+					// outward corner, walls are on bottom and left side
+					int Id = 1;
+					int rotation = 270;
+					FName TileName = FName("Corner_Concave");
+					AdjustedLocation.Y += TileSize;
+					RoomCorners.Emplace(TileName, Id, rotation, AdjustedLocation);
+				}
+				else
 				{
 					// inward corner, requires 3 tiles, the corner tile itself will have it's corner on top left.
 					int Id = 1;
@@ -685,18 +706,18 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					FName TileName = FName("Corner_Convex");
 					RoomCorners.Emplace(TileName, Id, rotation, Curr);
 				}
-				else
-				{
-					// outward corner, walls are on top and right side
-					int Id = 1;
-					int rotation = 180;
-					FName TileName = FName("Corner_Concave");
-					RoomCorners.Emplace(TileName, Id, rotation, Curr);
-				}
 			}
 			else if (Curr.Y > Prev.Y)
 			{
-				if (Curr.X > Next.X)
+				if (Curr.X > Next.X) // next is to the right of curr
+				{
+					// outward corner, walls are on the top and left.
+					int Id = 1;
+					int rotation = 0;
+					FName TileName = FName("Corner_Concave");
+					RoomCorners.Emplace(TileName, Id, rotation, AdjustedLocation);
+				}
+				else
 				{
 					// inward corner, requires 3 tiles, the corner tile will have it's corner on bottom left.
 					int Id = 1;
@@ -704,32 +725,26 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					FName TileName = FName("Corner_Convex");
 					RoomCorners.Emplace(TileName, Id, rotation, Curr);
 				}
-				else
-				{
-					// outward corner, walls are on the top and left.
-					int Id = 1;
-					int rotation = 90;
-					FName TileName = FName("Corner_Concave");
-					RoomCorners.Emplace(TileName, Id, rotation, Curr);
-				}
 			}
 			else
 			{
-				if (Curr.X > Next.X)
-				{
-					// outward corner, walls are on the bottom and right
-					int Id = 1;
-					int rotation = 270;
-					FName TileName = FName("Corner_Concave");
-					RoomCorners.Emplace(TileName, Id, rotation, Curr);
-				}
-				else
+				if (Curr.X > Next.X) // next is to the right of curr
 				{
 					// inward corner, requires 3 tiles, the corner tile will have it's corner on top right here.
 					int Id = 1;
 					int rotation = 0;
 					FName TileName = FName("Corner_Convex");
-					RoomCorners.Emplace(TileName, Id, rotation, Curr);
+					RoomCorners.Emplace(TileName, Id, rotation, AdjustedLocation);
+				}
+				else
+				{
+					// outward corner, walls are on the bottom and right
+					int Id = 1;
+					int rotation = 180;
+					FName TileName = FName("Corner_Concave");
+					AdjustedLocation.X += TileSize;
+					AdjustedLocation.Y += TileSize;
+					RoomCorners.Emplace(TileName, Id, rotation, AdjustedLocation);
 				}
 			}
 		}
@@ -740,7 +755,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 			Next = NextTile.Location;
 			uint32 CornerToCornerDist = FMath::Max(FMath::Abs(Curr.X - Next.X), FMath::Abs(Curr.Y - Next.Y));
 			// subtract tilesize here because two adjacent concave corners won't need any adjoining walls.
-			StraightWallCount = (CornerToCornerDist - TileSize) / TileSize;
+			StraightWallCount = CornerToCornerDist / TileSize;
 			if (NextTile.name == FName("Corner_Convex"))
 			{
 				StraightWallCount++;
@@ -777,7 +792,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 				}
 				else if (RoomCorners[i].Rotation == 180)
 				{
-					// walls here are up 1 t ile and leading off to the left.
+					// walls here are up 1 tile and leading off to the left.
 					for (int j = 0; j < StraightWallCount; j++)
 					{
 						FName TileName = FName("Wall_Cave");
@@ -808,8 +823,8 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					{
 						FName TileName = FName("Wall_Cave");
 						int Id = 2;
-						int Rotation = 90;
-						FIntPoint Location = FIntPoint(Curr.X, Curr.Y + (TileSize * (j + 1)));
+						int Rotation = 270;
+						FIntPoint Location = FIntPoint(Curr.X - (TileSize * (j + 1)), Curr.Y);
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
@@ -819,8 +834,8 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					{
 						FName TileName = FName("Wall_Cave");
 						int Id = 2;
-						int Rotation = 180;
-						FIntPoint Location = FIntPoint(Curr.X + (TileSize * (j + 1)), Curr.Y);
+						int Rotation = 0;
+						FIntPoint Location = FIntPoint(Curr.X, Curr.Y - (TileSize * (j + 1)));
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
@@ -830,8 +845,8 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					{
 						FName TileName = FName("Wall_Cave");
 						int Id = 2;
-						int Rotation = 270;
-						FIntPoint Location = FIntPoint(Curr.X, Curr.Y - (TileSize * (j + 1)));
+						int Rotation = 90;
+						FIntPoint Location = FIntPoint(Curr.X + (TileSize * (j + 1)), Curr.Y);
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
@@ -841,8 +856,8 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					{
 						FName TileName = FName("Wall_Cave");
 						int Id = 2;
-						int Rotation = 0;
-						FIntPoint Location = FIntPoint(Curr.X - (TileSize * (j + 1)), Curr.Y);
+						int Rotation = 180;
+						FIntPoint Location = FIntPoint(Curr.X, Curr.Y + (TileSize * (j + 1)));
 						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
 					}
 				}
