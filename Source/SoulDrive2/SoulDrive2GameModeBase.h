@@ -31,22 +31,13 @@ struct FRoomDescriptor {
 	UPROPERTY()
 	TArray<FIntPoint> OrderedRoomCorners;
 
-	FRoomDescriptor() {}
-};
-
-/*
-** We may need to track things here like FNames of Room Descriptors, or where exactly the openings are, or we may want to use a struct that only defines the
-** array of points, that gets extended for the full room functionality, lot of this is TBD.
-*/
-USTRUCT(BlueprintType)
-struct FHallwayDescriptor {
-	GENERATED_USTRUCT_BODY()
-
-	public:
 	UPROPERTY()
-	TArray<FIntPoint> OrderedHallCorners;
+	int RoomId; // unique identifier of this room
 
-	FHallwayDescriptor() {}
+	UPROPERTY()
+	FBox Box; // just to be able to store our potential min/max for placement of floors.
+
+	FRoomDescriptor() {}
 };
 
 USTRUCT(BlueprintType)
@@ -153,6 +144,27 @@ struct FTileDescriptor
 	// 	{ }
 };
 
+/*
+** We may need to track things here like FNames of Room Descriptors, or where exactly the openings are, or we may want to use a struct that only defines the
+** array of points, that gets extended for the full room functionality, lot of this is TBD.
+*/
+USTRUCT(BlueprintType)
+struct FHallwayDescriptor {
+	GENERATED_USTRUCT_BODY()
+
+	public:
+	UPROPERTY()
+	TArray<FIntPoint> OrderedHallCorners;
+
+	UPROPERTY()
+	TArray<FTileDescriptor> DoorLocations; // tiles where there are doors into this hallway.
+
+	UPROPERTY()
+	TArray<int> RoomIds; // the two rooms this hallway connects, could expand to include branching halls later
+
+	FHallwayDescriptor() {}
+};
+
 USTRUCT(BlueprintType)
 struct FTileArray
 {
@@ -219,7 +231,17 @@ class SOULDRIVE2_API ASoulDrive2GameModeBase : public AGameModeBase
 
 
 public:
-	int DEBUG_ROOM_LIMIT = 103; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
+	UPROPERTY(BlueprintReadWrite, Category = "MapGen")
+	int DEBUG_ROOM_LIMIT = 500; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
+	UPROPERTY(EditDefaultsOnly, Category="MapGen")
+	uint32 MINIMUM_LEAF_QUAD_SIZE = 5;
+ 	UPROPERTY(EditDefaultsOnly, Category = "MapGen")
+ 	uint32 MINIMUM_STEM_QUAD_SIZE = 6;
+ 	UPROPERTY(EditDefaultsOnly, Category = "MapGen")
+ 	uint8 MAXIMUM_QUAD_DEPTH = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "MapGen")
+ 	uint32 MINIMUM_ROOM_DIMENSIONS = 3;
+
 	TArray<AActor*> playerStartArray;
 
 	ASoulDrive2GameModeBase();
@@ -280,10 +302,7 @@ public:
 
 	int IndexFromPoint(int x, int y, int maxX, int maxY);
 private:
-	const uint32 MINIMUM_LEAF_QUAD_SIZE = 1;
-	const uint32 MINIMUM_STEM_QUAD_SIZE = 800;
-	const uint8 MAXIMUM_QUAD_DEPTH = 1;
-	const uint32 MINIMUM_ROOM_DIMENSIONS = 2;
+
 	// How many cutouts do we want from our room? each index in this array should map to the number of cutouts to use, so if our weighted random technique gets a '1'
 	// we want to use a single cutout. Note that '0' is expected to be valid, because of course we want some rooms that really are rectangles.
 	const static TArray<uint16> NUMBER_OF_ROOM_CUTOUT_WEIGHTS;
@@ -326,9 +345,11 @@ private:
 	** Assign room dimensions within each quad.
 	*/
 	TArray<FRoomDescriptor> MakeRoomsInQuads(FRandomStream RandomStream);
-	TArray<FHallwayDescriptor> MakeHallways(FRandomStream RandomStream);
+	TArray<FHallwayDescriptor> MakeHallways(FRandomStream RandomStream, TArray<FRoomDescriptor> &Rooms);
+	FTileDescriptor MakeDoorway(const TArray<FTileDescriptor>& CornerDescriptors, const FRoomDescriptor LocalRoom, const FRoomDescriptor ConnectedRoom);
 	void BuildTileLocationsList(TArray<FRoomDescriptor> Rooms, TArray<FHallwayDescriptor> Hallways, TArray<FTileDescriptor> &TileDescriptors);
-
+	void PlaceHallTiles(TArray<FTileDescriptor> &TileDescriptors, FHallwayDescriptor Hallway);
+	bool FindDoorConflict(const TArray<FTileDescriptor> &Doorways, const FIntPoint Location);
 
 
 	UDataTable* EdgeMapData;
