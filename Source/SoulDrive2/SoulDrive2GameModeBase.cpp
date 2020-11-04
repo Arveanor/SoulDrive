@@ -645,7 +645,7 @@ TArray<FHallwayDescriptor> ASoulDrive2GameModeBase::MakeHallways(FRandomStream R
 
 		// find nearest room
 		FVector2D RoomCenter = FVector2D(Room.Box.GetCenter().X, Room.Box.GetCenter().Y);
-		FRoomDescriptor* NearestRoom = nullptr;
+		FRoomDescriptor NearestRoom;
 		float Distance = 100000;
 		for (FRoomDescriptor RoomMatch : Rooms)
 		{
@@ -653,16 +653,11 @@ TArray<FHallwayDescriptor> ASoulDrive2GameModeBase::MakeHallways(FRandomStream R
 			if (DistanceCheck < Distance && DistanceCheck > 1.f) // given tile sizes, a distance of 1.0 isn't possible, and I'd rather check that than 0.f in case of any weird float math
 			{
 				Distance = DistanceCheck;
-				NearestRoom = &RoomMatch;
+				NearestRoom = RoomMatch;
 			}
 		}
-		if (NearestRoom == nullptr)
-		{
-			break;
-			UE_LOG(LogTemp, Error, TEXT("Couldn't find a nearest room for a hallway during map generation"));
-		}
 		NewHallway.RoomIds.Add(Room.RoomId);
-		NewHallway.RoomIds.Add(NearestRoom->RoomId);
+		NewHallway.RoomIds.Add(NearestRoom.RoomId);
 		Results.Add(NewHallway);
 
 
@@ -853,7 +848,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 		}
 		Doorways.Empty();
 		// here we can place hall entrance tiles based on a hallway descriptor of room id <--> room id
-		for (FHallwayDescriptor Hall : Hallways)
+		for (FHallwayDescriptor &Hall : Hallways)
 		{
 			if (Room.RoomId == Hall.RoomIds[0])
 			{
@@ -1029,12 +1024,14 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 		// loop over wall descriptors looking for right and left facing walls at each y value, there could be multiple with cutouts (think H shaped room)
 		// so do a bit of scanning to figure out how to position floors between facing walls without breaking anything.
  		}
-		for (FHallwayDescriptor Hallway : Hallways)
-		{
-			PlaceHallTiles(TileDescriptors, Hallway);
-		}
+
+		TileDescriptors.Append(Doorways);
 		TileDescriptors.Append(RoomCorners);
 		TileDescriptors.Append(WallDescriptors);
+	}
+	for (FHallwayDescriptor Hallway : Hallways)
+	{
+		PlaceHallTiles(TileDescriptors, Hallway);
 	}
 }
 
@@ -1043,16 +1040,30 @@ void ASoulDrive2GameModeBase::PlaceHallTiles(TArray<FTileDescriptor> &TileDescri
 	// need to find the direction from Hallway.DoorLocations[0] to Hallway.DoorLocations[1], then we'll place tiles along 1 axis, turn, and add them to the next axis,
 	// then one more turn as needed.
 	FIntPoint Difference = Hallway.DoorLocations[0].Location - Hallway.DoorLocations[1].Location;
+	FName TileName = FName("Hallway_Cave_Straight");
+	FIntPoint Location;
+
 	switch (Hallway.DoorLocations[0].Rotation)
 	{
 	case 0:
-
+		// Here I need to place tiles above the doorway with increasing y values
+		Location = FIntPoint(Hallway.DoorLocations[0].Location.X, Hallway.DoorLocations[0].Location.Y + TileSize);
+		TileDescriptors.Emplace(TileName, 4, 90, Location);
 		break;
 	case 90:
+		// Here I need to place tiles right of the doorway with decreasing x values
+		Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, Hallway.DoorLocations[0].Location.Y);
+		TileDescriptors.Emplace(TileName, 4, 180, Location);
 		break;
 	case 180:
+		// Here I need to place tiles below the door way with decreasing y values
+		Location = FIntPoint(Hallway.DoorLocations[0].Location.X, Hallway.DoorLocations[0].Location.Y - TileSize);
+		TileDescriptors.Emplace(TileName, 4, 270, Location);
 		break;
 	case 270:
+		// Here I need to place tiles left of the doorway with increasing x values
+		Location = FIntPoint(Hallway.DoorLocations[0].Location.X + TileSize, Hallway.DoorLocations[0].Location.Y);
+		TileDescriptors.Emplace(TileName, 4, 0, Location);
 		break;
 	}
 }
