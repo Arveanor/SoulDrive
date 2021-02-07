@@ -64,7 +64,10 @@ void ASoulDrive2GameModeBase::SetLevelActive(bool IsActive)
 
 int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileDescriptors)
 {
-	FRandomStream RandomStream = FRandomStream(2343);
+	FRandomStream RandomStream;
+	//RandomStream.GenerateNewSeed(); 
+	RandomStream = FRandomStream(12305);
+	UE_LOG(LogTemp, Warning, TEXT("Random seed is %d"), RandomStream.GetCurrentSeed());
 	MakeQuads(RandomStream, FIntPoint(50, 50), FVector(0, 0, 0));
 	TArray<FRoomDescriptor> RoomDescriptors;
 	TArray<FHallwayDescriptor> HallwayDescriptors;
@@ -579,12 +582,13 @@ TArray<FRoomDescriptor> ASoulDrive2GameModeBase::MakeRoomsInQuads(FRandomStream 
 		if (DEBUG_ROOM_LIMIT <= 0) break;
 		DEBUG_ROOM_LIMIT--;
 		FIntPoint RoomExtent = FIntPoint(RandomStream.FRandRange(MINIMUM_ROOM_DIMENSIONS, Box.GetSize().X),
-			RandomStream.FRandRange(MINIMUM_ROOM_DIMENSIONS, Box.GetSize().Y)) * TileSize;
+			RandomStream.FRandRange(MINIMUM_ROOM_DIMENSIONS, Box.GetSize().Y));
 
 		// Once we know the extent of our room, we should know how much free x and y space we have to adjust the origin of the room.
 		// The origin here refers to the bottom left corner, which would be the "Min" vector from an fbox
-		FIntPoint RoomOrigin = FIntPoint(RandomStream.FRandRange(0, Box.GetSize().X * TileSize - RoomExtent.X),
-			RandomStream.FRandRange(0, Box.GetSize().Y * TileSize - RoomExtent.Y));
+		FIntPoint RoomOrigin = FIntPoint(RandomStream.FRandRange(0, Box.GetSize().X - RoomExtent.X),
+			RandomStream.FRandRange(0, Box.GetSize().Y - RoomExtent.Y)) * TileSize;
+		RoomExtent = RoomExtent * TileSize;
 		RoomOrigin.X += Box.Min.X * TileSize;
 		RoomOrigin.Y += Box.Min.Y * TileSize;
 		UE_LOG(LogTemp, Warning, TEXT("FBox: %s"), *Box.ToString());
@@ -622,19 +626,24 @@ TArray<FRoomDescriptor> ASoulDrive2GameModeBase::MakeRoomsInQuads(FRandomStream 
 		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin + RoomExtent - FIntPoint(0, TileSize));
 		RoomDescriptor.OrderedRoomCorners.Add(RoomOrigin + FIntPoint(TileSize, RoomExtent.Y - TileSize));
 
+		if (RoomDescriptor.RoomId == 3)
+		{
+			//DrawDebugBox(GetWorld(), FVector(RoomOrigin.X, RoomOrigin.Y, 0), FVector(RoomExtent.X / 2, RoomExtent.Y / 2, 100), FColor::Emerald, true, 990, 0, 20.f);
+		}
+		if (RoomDescriptor.RoomId == 10)
+		{
+			//DrawDebugBox(GetWorld(), FVector(RoomOrigin.X, RoomOrigin.Y, 0), FVector(RoomExtent.X / 2, RoomExtent.Y / 2, 100), FColor::Magenta, true, 990, 0, 20.f);
+		}
+	
 		Results.Add(RoomDescriptor);
 	}
 	return Results;
 }
 
+
 TArray<FHallwayDescriptor> ASoulDrive2GameModeBase::MakeHallways(FRandomStream RandomStream, TArray<FRoomDescriptor> &Rooms)
 {
 	TArray<FHallwayDescriptor> Results = TArray<FHallwayDescriptor>();
-
-	// we probably want to accept the list of room descriptors here, maybe enhancing those with min/max
-	// if we know the min/max extents of a room, we can use that to find nearby neighbors, but we can also 
-	// probably do some simple work to ensure that rooms are in some type of order, and use that as our basis for finding neighbors
-	// also not sure about how much I want non neighbors connecting, or how often a room should have more than 2 halls, or if halls should intersect.
 
 	// TODO: make a quick & dirty hallway algorithm to add n - 1 halls connecting rooms (in no particular order) to their nearest neighbors, then we can look at that and make
 	// better decisions
@@ -650,12 +659,15 @@ TArray<FHallwayDescriptor> ASoulDrive2GameModeBase::MakeHallways(FRandomStream R
 		for (FRoomDescriptor RoomMatch : Rooms)
 		{
 			float DistanceCheck = FVector2D::Distance(RoomCenter, FVector2D(RoomMatch.Box.GetCenter().X, RoomMatch.Box.GetCenter().Y));
-			if (DistanceCheck < Distance && DistanceCheck > 1.f) // given tile sizes, a distance of 1.0 isn't possible, and I'd rather check that than 0.f in case of any weird float math
+			if (DistanceCheck < Distance && RoomMatch.RoomId != Room.RoomId) // given tile sizes, a distance of 1.0 isn't possible, and I'd rather check that than 0.f in case of any weird float math
 			{
 				Distance = DistanceCheck;
 				NearestRoom = RoomMatch;
 			}
 		}
+		UE_LOG(LogTemp, Warning, TEXT("Distance between connected rooms = %f"), Distance);
+		UE_LOG(LogTemp, Warning, TEXT("Connected room ids = %d, %d"), Room.RoomId, NearestRoom.RoomId);
+
 		NewHallway.RoomIds.Add(Room.RoomId);
 		NewHallway.RoomIds.Add(NearestRoom.RoomId);
 		Results.Add(NewHallway);
@@ -668,71 +680,194 @@ TArray<FHallwayDescriptor> ASoulDrive2GameModeBase::MakeHallways(FRandomStream R
 	return Results;
 }
 
+/*
+** I need to apply an offset to a doorway based on it's own rotation, but also based on the rotation of the corner it's nearest
+*/
 FTileDescriptor ASoulDrive2GameModeBase::MakeDoorway(const TArray<FTileDescriptor>& CornerDescriptors, const FRoomDescriptor LocalRoom, const FRoomDescriptor ConnectedRoom)
 {
 	FTileDescriptor Results;
 
 	float XDiff = LocalRoom.Box.GetCenter().X - ConnectedRoom.Box.GetCenter().X;
 	float YDiff = LocalRoom.Box.GetCenter().Y - ConnectedRoom.Box.GetCenter().Y;
-	int TargetRotation = -1;
+	int TargetRotation = -1; // expected rotation of our corner piece to get it's wall to line up correctly with our doorway
 	int DoorRotation = 0;
-	bool bUseXOffset = false;
 	FName TileName = FName("Doorway");
+	FIntPoint DoorLocation;
 
 	TArray <FTileDescriptor> DoorwayCandidates;
 	if (FMath::Abs(XDiff) > FMath::Abs(YDiff))
 	{
-		bUseXOffset = false;
 		// start the hallway as horizontal
 		if (XDiff > 0)
 		{
-			// start the hallway on the right side of Room
-			DoorRotation = 180;
+			// start the hallway on the right side of Room, above a corner
+			DoorRotation = 0;
 			TargetRotation = 180;
+			DoorLocation = FIntPoint(0 - TileSize, 0);
 		}
 		else
 		{
 			// start the hallway on the left side of Room
-			DoorRotation = 0;
+			DoorRotation = 180;
 			TargetRotation = 270;
+			DoorLocation = FIntPoint(TileSize, TileSize);
 		}
 	}
 	else
 	{
-		bUseXOffset = true;
 		// start the hallway as vertical
 		if (YDiff > 0)
 		{
 			// start the hallway on the bottom of Room
-			DoorRotation = 270;
+			DoorRotation = 90;
 			TargetRotation = 180;
+			DoorLocation = FIntPoint(TileSize, 0 - TileSize);
 		}
 		else
 		{
 			// start the hallway on the top of Room
-			DoorRotation = 90;
+			DoorRotation = 270;
 			TargetRotation = 90;
+			DoorLocation = FIntPoint(0, TileSize);
 		}
 	}
 	for (FTileDescriptor Corner : CornerDescriptors)
 	{
 		if (Corner.Rotation == TargetRotation)
 		{
-			FIntPoint DoorLocation = Corner.Location;
-			if (bUseXOffset)
-			{
-				DoorLocation.X += TileSize;
-			}
-			else
-			{
-				DoorLocation.Y += TileSize;
-			}
+			DoorLocation += Corner.Location;
+
 			Results = FTileDescriptor(TileName, 4, DoorRotation, DoorLocation);
 			break;
 		}
 	}
 
 	return Results;
+}
+
+TArray<FTileDescriptor> ASoulDrive2GameModeBase::PlaceWallTiles(const TArray<FTileDescriptor> &RoomCorners, const TArray<FTileDescriptor> &Doorways)
+{
+	FIntPoint Curr;
+	FIntPoint Next;
+	uint8 StraightWallCount;
+	TArray<FTileDescriptor> WallDescriptors;
+	for (int i = 0; i < RoomCorners.Num(); i++)
+	{
+		FIntPoint Location;
+		int Id = 2;
+		int Rotation = 0;
+		FName TileName = "Wall_Cave";
+		FTileDescriptor NextTile = (RoomCorners.Num() - 1 == i) ? RoomCorners[0] : RoomCorners[i + 1];
+		Curr = RoomCorners[i].Location;
+		Next = NextTile.Location;
+		uint32 CornerToCornerDist = FMath::Max(FMath::Abs(Curr.X - Next.X), FMath::Abs(Curr.Y - Next.Y));
+		// subtract tilesize here because two adjacent concave corners won't need any adjoining walls.
+		StraightWallCount = CornerToCornerDist / TileSize;
+		if (NextTile.name == FName("Corner_Convex"))
+		{
+			StraightWallCount++;
+		}
+
+		if (RoomCorners[i].name == FName("Corner_Convex"))
+		{
+			StraightWallCount++;
+			if (RoomCorners[i].Rotation == 0)
+			{
+				// this should put our corner piece in the bottom left corner of the tile, with our tiles having their walls on the right, and being offset one
+				// tile width to the left of our current position
+				for (int j = 0; j < StraightWallCount; j++)
+				{
+					Rotation = 270;
+					Location = FIntPoint(Curr.X - TileSize, Curr.Y + (TileSize * j));
+					if (!FindDoorConflict(Doorways, Location))
+					{
+						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
+					}
+				}
+
+			}
+			else if (RoomCorners[i].Rotation == 90)
+			{
+				// walls here are up 1 tile and leading off to the right.
+				for (int j = 0; j < StraightWallCount; j++)
+				{
+					Rotation = 0;
+					Location = FIntPoint(Curr.X + (TileSize * j), Curr.Y + TileSize);
+					if (!FindDoorConflict(Doorways, Location))
+					{
+						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
+
+					}
+				}
+			}
+			else if (RoomCorners[i].Rotation == 180)
+			{
+				// walls here are up 1 tile and leading off to the left.
+				for (int j = 0; j < StraightWallCount; j++)
+				{
+					Rotation = 0;
+					Location = FIntPoint(Curr.X - (TileSize * j), Curr.Y + TileSize);
+					if(!FindDoorConflict(Doorways, Location))
+						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
+				}
+			}
+			else if (RoomCorners[i].Rotation == 270)
+			{
+				// walls here are going up and are 1 to the right
+				for (int j = 0; j < StraightWallCount; j++)
+				{
+					Rotation = 90;
+					Location = FIntPoint(Curr.X + TileSize, Curr.Y + (TileSize * j));
+					if(!FindDoorConflict(Doorways, Location))
+						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
+				}
+			}
+		}
+		else if (RoomCorners[i].name == FName("Corner_Concave"))
+		{
+			if (RoomCorners[i].Rotation == 0)
+			{
+				for (int j = 0; j < StraightWallCount; j++)
+				{
+					Rotation = 270;
+					Location = FIntPoint(Curr.X - (TileSize * (j + 1)), Curr.Y + TileSize);
+					if(!FindDoorConflict(Doorways, Location)) 
+						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
+				}
+			}
+			else if (RoomCorners[i].Rotation == 90)
+			{
+				for (int j = 0; j < StraightWallCount; j++)
+				{
+					Rotation = 0;
+					Location = FIntPoint(Curr.X - TileSize, Curr.Y - (TileSize * (j + 1)));
+					if(!FindDoorConflict(Doorways, Location))
+						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
+				}
+			}
+			else if (RoomCorners[i].Rotation == 180)
+			{
+				for (int j = 0; j < StraightWallCount; j++)
+				{
+					Rotation = 90;
+					Location = FIntPoint(Curr.X + (TileSize * (j + 1)), Curr.Y - TileSize);
+					if(!FindDoorConflict(Doorways, Location))
+						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
+				}
+			}
+			else if (RoomCorners[i].Rotation == 270)
+			{
+				for (int j = 0; j < StraightWallCount; j++)
+				{
+					Rotation = 180;
+					Location = FIntPoint(Curr.X + TileSize, Curr.Y + (TileSize * (j + 1)));
+					if(!FindDoorConflict(Doorways, Location))
+						WallDescriptors.Emplace(TileName, Id, Rotation, Location);
+				}
+			}
+		}
+	}
+	return WallDescriptors;
 }
 
 void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Rooms, TArray<FHallwayDescriptor> Hallways, TArray<FTileDescriptor> &TileDescriptors)
@@ -747,11 +882,11 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 		FIntPoint Curr;
 		FIntPoint AdjustedLocation;
 		FIntPoint Next;
-		uint8 StraightWallCount;
 		TArray<FTileDescriptor> WallDescriptors; // Necessary so that I can loop through corners without adding walls to the full list until I'm done.
 		TArray<FTileDescriptor> RoomCorners; // Similar to above, store all of the rooms corner tiles in their own array temporarily so we can iterate properly.
 		TArray<FTileDescriptor> Doorways;
 
+		// for loop to create tiles of each room corner
 		for (int i = 0; i < Room.OrderedRoomCorners.Num(); i++)
 		{
 			Curr = Room.OrderedRoomCorners[i];
@@ -845,7 +980,7 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 					RoomCorners.Emplace(TileName, Id, rotation, AdjustedLocation);
 				}
 			}
-		}
+		} // end for loop to tile-ify corners
 		Doorways.Empty();
 		// here we can place hall entrance tiles based on a hallway descriptor of room id <--> room id
 		for (FHallwayDescriptor &Hall : Hallways)
@@ -875,133 +1010,12 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 				}
 			}
 		}
-		for (int i = 0; i < RoomCorners.Num(); i++)
-		{
-			FIntPoint Location;
-			int Id = 2;
-			int Rotation = 0;
-			FName TileName = "Wall_Cave";
-			FTileDescriptor NextTile = (RoomCorners.Num() - 1 == i) ? RoomCorners[0] : RoomCorners[i + 1];
-			Curr = RoomCorners[i].Location;
-			Next = NextTile.Location;
-			uint32 CornerToCornerDist = FMath::Max(FMath::Abs(Curr.X - Next.X), FMath::Abs(Curr.Y - Next.Y));
-			// subtract tilesize here because two adjacent concave corners won't need any adjoining walls.
-			StraightWallCount = CornerToCornerDist / TileSize;
-			if (NextTile.name == FName("Corner_Convex"))
-			{
-				StraightWallCount++;
-			}
 
-			if (RoomCorners[i].name == FName("Corner_Convex"))
-			{
-				StraightWallCount++;
-				if (RoomCorners[i].Rotation == 0)
-				{
-					// this should put our corner piece in the bottom left corner of the tile, with our tiles having their walls on the right, and being offset one
-					// tile width to the left of our current position
-					for (int j = 0; j < StraightWallCount; j++)
-					{
-						Rotation = 270;
-						Location = FIntPoint(Curr.X - TileSize, Curr.Y + (TileSize * j));
-						if (!FindDoorConflict(Doorways, Location))
-						{
-							WallDescriptors.Emplace(TileName, Id, Rotation, Location);
-						}
-					}
+		// UE_LOG(LogTemp, Warning, TEXT("Doorway Pair Failures = %d"), failed);
+		// place straight cave walls around room
+		WallDescriptors = PlaceWallTiles(RoomCorners, Doorways);
 
-				}
-				else if (RoomCorners[i].Rotation == 90)
-				{
-					// walls here are up 1 tile and leading off to the right.
-					for (int j = 0; j < StraightWallCount; j++)
-					{
-						Rotation = 0;
-						Location = FIntPoint(Curr.X + (TileSize * j), Curr.Y + TileSize);
-						if (!FindDoorConflict(Doorways, Location))
-						{
-							WallDescriptors.Emplace(TileName, Id, Rotation, Location);
-						}
-					}
-				}
-				else if (RoomCorners[i].Rotation == 180)
-				{
-					// walls here are up 1 tile and leading off to the left.
-					for (int j = 0; j < StraightWallCount; j++)
-					{
-						Rotation = 0;
-						Location = FIntPoint(Curr.X - (TileSize * j), Curr.Y + TileSize);
-						if (!FindDoorConflict(Doorways, Location))
-						{
-							WallDescriptors.Emplace(TileName, Id, Rotation, Location);
-						}
-					}
-				}
-				else if (RoomCorners[i].Rotation == 270)
-				{
-					// walls here are going up and are 1 to the right
-					for (int j = 0; j < StraightWallCount; j++)
-					{
-						Rotation = 90;
-						Location = FIntPoint(Curr.X + TileSize, Curr.Y + (TileSize * j));
-						if (!FindDoorConflict(Doorways, Location))
-						{
-							WallDescriptors.Emplace(TileName, Id, Rotation, Location);
-						}
-					}
-				}
-			}
-			else if (RoomCorners[i].name == FName("Corner_Concave"))
-			{
-				if (RoomCorners[i].Rotation == 0)
-				{
-					for (int j = 0; j < StraightWallCount; j++)
-					{
-						Rotation = 270;
-						Location = FIntPoint(Curr.X - (TileSize * (j + 1)), Curr.Y);
-						if (!FindDoorConflict(Doorways, Location))
-						{
-							WallDescriptors.Emplace(TileName, Id, Rotation, Location);
-						}
-					}
-				}
-				else if (RoomCorners[i].Rotation == 90)
-				{
-					for (int j = 0; j < StraightWallCount; j++)
-					{
-						Rotation = 0;
-						Location = FIntPoint(Curr.X, Curr.Y - (TileSize * (j + 1)));
-						if (!FindDoorConflict(Doorways, Location))
-						{
-							WallDescriptors.Emplace(TileName, Id, Rotation, Location);
-						}
-					}
-				}
-				else if (RoomCorners[i].Rotation == 180)
-				{
-					for (int j = 0; j < StraightWallCount; j++)
-					{
-						Rotation = 90;
-						Location = FIntPoint(Curr.X + (TileSize * (j + 1)), Curr.Y);
-						if (!FindDoorConflict(Doorways, Location))
-						{
-							WallDescriptors.Emplace(TileName, Id, Rotation, Location);
-						}
-					}
-				}
-				else if (RoomCorners[i].Rotation == 270)
-				{
-					for (int j = 0; j < StraightWallCount; j++)
-					{
-						Rotation = 180;
-						Location = FIntPoint(Curr.X, Curr.Y + (TileSize * (j + 1)));
-						if (!FindDoorConflict(Doorways, Location))
-						{
-							WallDescriptors.Emplace(TileName, Id, Rotation, Location);
-						}
-					}
-				}
-			}
-		}
+		// place floor tiles loop
 		for (FTileDescriptor Wall : WallDescriptors)
 		{
 			if (Wall.Rotation == 180)
@@ -1031,39 +1045,383 @@ void ASoulDrive2GameModeBase::BuildTileLocationsList(TArray<FRoomDescriptor> Roo
 	}
 	for (FHallwayDescriptor Hallway : Hallways)
 	{
+		int failed = 0;
+		if (Hallway.DoorLocations.Num() > 1)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Doorway Pair: (%d, %d, %d, %d) | (%d, %d, %d, %d)"), Hallway.DoorLocations[0].Location.X, Hallway.DoorLocations[0].Location.Y,
+				Hallway.DoorLocations[0].Rotation, Hallway.RoomIds[0], Hallway.DoorLocations[1].Location.X, Hallway.DoorLocations[1].Location.Y, 
+				Hallway.DoorLocations[1].Rotation, Hallway.RoomIds[1]);
+		}
+		else
+			failed++;
 		PlaceHallTiles(TileDescriptors, Hallway);
 	}
 }
 
 void ASoulDrive2GameModeBase::PlaceHallTiles(TArray<FTileDescriptor> &TileDescriptors, FHallwayDescriptor Hallway)
 {
-	// need to find the direction from Hallway.DoorLocations[0] to Hallway.DoorLocations[1], then we'll place tiles along 1 axis, turn, and add them to the next axis,
-	// then one more turn as needed.
-	FIntPoint Difference = Hallway.DoorLocations[0].Location - Hallway.DoorLocations[1].Location;
+	// A hallway can make one turn, two turns, or no turns. 
+	// ** A one turn hallway occurs when our halls entrances are perpendicular
+	// ** A two turn hallway occurs when our halls entrances are parallel but do not "align" with one another so we must make two turns to reach alignment and get back
+	// *** to facing the direction we need to attach to the opposing door
+	//** A zero turn hallway occurs when our hall entrances are parallel and they do "align" with one another.
+
+	// based on above information, I think...
+	// we check for perp/parallel entrances
+	// ** for perpendicular entrances we can go one direction until we align with the opposite doorway, then rotate and place tiles to that door
+	// ** for parallel entrances we can go half the distance to the opposite door and make our s bend, again going as far as necessary to align to the next door
+	// ** for zero turn halls.. you know what to do ;)
+
+	int mainAxisDist;
+	int secondAxisDist;
+	bool bDoorsParallel = CheckDoorsParallel(Hallway.DoorLocations[0].Rotation, Hallway.DoorLocations[1].Rotation);
 	FName TileName = FName("Hallway_Cave_Straight");
+	FName TileNameCurve = FName("Hallway_Cave_Curve");
 	FIntPoint Location;
+
+
 
 	switch (Hallway.DoorLocations[0].Rotation)
 	{
-	case 0:
-		// Here I need to place tiles above the doorway with increasing y values
-		Location = FIntPoint(Hallway.DoorLocations[0].Location.X, Hallway.DoorLocations[0].Location.Y + TileSize);
-		TileDescriptors.Emplace(TileName, 4, 90, Location);
+	case 30:
+		mainAxisDist = (Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X - TileSize) / TileSize;
+		// Here I need to place tiles right of the doorway with decreasing x values
+		if (bDoorsParallel)
+		{
+			if (Hallway.DoorLocations[0].Location.Y == Hallway.DoorLocations[1].Location.Y + TileSize)
+			{
+				for (int i = 0; i < mainAxisDist; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * i), Hallway.DoorLocations[0].Location.Y);
+					TileDescriptors.Emplace(TileName, 4, 90, Location);
+				}
+			}
+			else
+			{
+				for (int i = 0; i < mainAxisDist / 2 - 1; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * i), Hallway.DoorLocations[0].Location.Y);
+					TileDescriptors.Emplace(TileName, 4, 90, Location);
+				}
+				// place our two corners at the place where the above path stops and the heights of each doorway
+				for (int i = 0; i < mainAxisDist / 2 + mainAxisDist % 2; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * i), Hallway.DoorLocations[1].Location.Y - TileSize);
+					TileDescriptors.Emplace(TileName, 4, 90, Location);
+				}
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("parallel offset between roomids: %d, %d"), Hallway.RoomIds[0], Hallway.RoomIds[1]);
+			int xPlaceholder = 0;
+			for (int i = 0; i < mainAxisDist / 2 - 1; i++) // Place tiles up to our first turn
+			{
+				Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, Hallway.DoorLocations[0].Location.Y - (TileSize * i) - TileSize);
+				TileDescriptors.Emplace(TileName, 4, 0, Location);
+				xPlaceholder = Location.X;
+			}
+			if (Hallway.DoorLocations[0].Location.Y >= Hallway.DoorLocations[1].Location.Y && mainAxisDist > 1) // Place our two corners and the pieces to connect them.
+			{
+				Location = FIntPoint(xPlaceholder + TileSize, Hallway.DoorLocations[0].Location.Y);
+				TileDescriptors.Emplace(TileNameCurve, 5, 90, Location);
+
+				Location = FIntPoint(xPlaceholder + (2 * TileSize), Hallway.DoorLocations[1].Location.Y);
+				TileDescriptors.Emplace(TileNameCurve, 5, 270, Location);
+
+				for (int i = 0; i < FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize - 2; i++)
+				{
+					Location = FIntPoint(xPlaceholder + (2 * TileSize), Hallway.DoorLocations[0].Location.Y - TileSize - (TileSize * i));
+					TileDescriptors.Emplace(TileName, 4, 0, Location);
+				}
+			}
+			else if (mainAxisDist > 1) // Place our two corners and the pieces to connect them, just in a different direction
+			{
+				Location = FIntPoint(xPlaceholder, Hallway.DoorLocations[0].Location.Y + TileSize);
+				TileDescriptors.Emplace(TileNameCurve, 5, 180, Location);
+
+				Location = FIntPoint(xPlaceholder + TileSize, Hallway.DoorLocations[1].Location.Y);
+				TileDescriptors.Emplace(TileNameCurve, 5, 0, Location);
+
+				for (int i = 0; i < FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize - 3; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * 2) + (TileSize * i), xPlaceholder - TileSize);
+					TileDescriptors.Emplace(TileName, 4, 90, Location);
+				}
+			}
+
+			for (int i = 0; i < mainAxisDist / 2 + mainAxisDist % 2; i++) // Place the remaining hall pieces from second corner to second door
+			{
+				Location = FIntPoint(xPlaceholder - TileSize * 2 - (TileSize * i), Hallway.DoorLocations[1].Location.Y - TileSize);
+				TileDescriptors.Emplace(TileName, 4, 0, Location);
+			}
+		}
 		break;
 	case 90:
-		// Here I need to place tiles right of the doorway with decreasing x values
-		Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, Hallway.DoorLocations[0].Location.Y);
-		TileDescriptors.Emplace(TileName, 4, 180, Location);
+		if (bDoorsParallel)
+		{
+			mainAxisDist = FMath::Abs(Hallway.DoorLocations[0].Location.Y - Hallway.DoorLocations[1].Location.Y) / TileSize;
+			if (Hallway.DoorLocations[0].Location.X == Hallway.DoorLocations[1].Location.X + TileSize)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("straight shot between roomids: %d, %d"), Hallway.RoomIds[0], Hallway.RoomIds[1]);
+				for (int i = 0; i < mainAxisDist; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, Hallway.DoorLocations[0].Location.Y - (TileSize * i) - TileSize);
+					TileDescriptors.Emplace(TileName, 4, 0, Location);
+				}
+			}
+			else
+			{
+				FColor DebugColor = FColor::Magenta;
+				if (Hallway.RoomIds[0] >= 5)
+					DebugColor = FColor::Red;
+				UE_LOG(LogTemp, Warning, TEXT("parallel offset between roomids: %d, %d doors at: (%d, %d) | (%d, %d)"), Hallway.RoomIds[0], Hallway.RoomIds[1], 
+					Hallway.DoorLocations[0].Location.X, Hallway.DoorLocations[0].Location.Y, Hallway.DoorLocations[1].Location.X, Hallway.DoorLocations[1].Location.Y);
+				int yPlaceholder = 0;
+				DrawDebugBox(GetWorld(), FVector(Hallway.DoorLocations[0].Location.X - TileSize, Hallway.DoorLocations[0].Location.Y - (TileSize * 0) - TileSize,
+					0), FVector(TileSize, TileSize, 100), DebugColor, true, 990, 0, 20.f);
+
+				for (int i = 0; i < mainAxisDist / 2 - 1; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, Hallway.DoorLocations[0].Location.Y - (TileSize * i) - TileSize);
+					TileDescriptors.Emplace(TileName, 4, 0, Location);
+					yPlaceholder = Location.Y;
+				}
+				if (Hallway.DoorLocations[0].Location.X > Hallway.DoorLocations[1].Location.X && mainAxisDist > 1)
+				{
+					// rotation of 270
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, yPlaceholder);
+					TileDescriptors.Emplace(TileNameCurve, 5, 270, Location);
+
+					Location = FIntPoint(Hallway.DoorLocations[1].Location.X + TileSize, yPlaceholder - TileSize);
+					TileDescriptors.Emplace(TileNameCurve, 5, 90, Location);
+
+					for (int i = 0; i < FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize - 2; i++)
+					{
+						Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize - (TileSize * i), yPlaceholder - TileSize);
+						TileDescriptors.Emplace(TileName, 4, 90, Location);
+					}
+				}
+				else if (mainAxisDist > 1)
+				{
+					// rotation of 180
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X, yPlaceholder);
+					TileDescriptors.Emplace(TileNameCurve, 5, 180, Location);
+
+					Location = FIntPoint(Hallway.DoorLocations[1].Location.X, yPlaceholder - TileSize);
+					TileDescriptors.Emplace(TileNameCurve, 5, 0, Location);
+
+					for (int i = 0; i < FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize - 3; i++)
+					{
+						Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * 2) + (TileSize * i), yPlaceholder - TileSize);
+						TileDescriptors.Emplace(TileName, 4, 90, Location);
+					}
+				}
+				// place our two corners at the place where the above path stops and the heights of each doorway
+
+				for (int i = 0; i < mainAxisDist / 2 + mainAxisDist % 2; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[1].Location.X, yPlaceholder - TileSize * 2 - (TileSize * i));
+					TileDescriptors.Emplace(TileName, 4, 0, Location);
+				}
+			}
+		}
+		else
+		{
+			// place tiles to fill up the entire first axis - 1, then a corner, then the next axis
+			mainAxisDist = Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X;
+			secondAxisDist = Hallway.DoorLocations[0].Location.Y - Hallway.DoorLocations[1].Location.Y;
+			int parityMultiplier;
+			if (secondAxisDist < 0)
+				parityMultiplier = 1;
+			else
+				parityMultiplier = -1;
+			secondAxisDist = FMath::Abs(secondAxisDist);
+			for (int i = 0; i < mainAxisDist - TileSize; i++)
+			{
+				Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * i), Hallway.DoorLocations[0].Location.Y);
+				TileDescriptors.Emplace(TileName, 4, 90, Location);
+			}
+			// place a single corner tile
+			for (int i = 0; i < secondAxisDist; i++)
+			{
+				Location = FIntPoint(Hallway.DoorLocations[0].Location.X + mainAxisDist, Hallway.DoorLocations[0].Location.Y + (TileSize * i * parityMultiplier));
+				TileDescriptors.Emplace(TileName, 4, 0, Location);
+			}
+		}
 		break;
-	case 180:
-		// Here I need to place tiles below the door way with decreasing y values
-		Location = FIntPoint(Hallway.DoorLocations[0].Location.X, Hallway.DoorLocations[0].Location.Y - TileSize);
-		TileDescriptors.Emplace(TileName, 4, 270, Location);
+	case 980:
+		// Here I need to place tiles left of the doorway with increasing x values
+		if (bDoorsParallel)
+		{
+			mainAxisDist = FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize;
+			if (Hallway.DoorLocations[0].Location.Y == Hallway.DoorLocations[1].Location.Y + TileSize)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("straight shot between roomids: %d, %d"), Hallway.RoomIds[0], Hallway.RoomIds[1]);
+				for (int i = 0; i < mainAxisDist; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X + TileSize * i + TileSize, Hallway.DoorLocations[0].Location.Y - TileSize);
+					TileDescriptors.Emplace(TileName, 4, 90, Location);
+				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("parallel offset between roomids: %d, %d"), Hallway.RoomIds[0], Hallway.RoomIds[1]);
+				int xPlaceholder = 0;
+				for (int i = 0; i < mainAxisDist / 2 - 1; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X + TileSize * i + TileSize, Hallway.DoorLocations[0].Location.Y - TileSize);
+					TileDescriptors.Emplace(TileName, 4, 90, Location);
+					xPlaceholder = Location.Y;
+				}
+				if (Hallway.DoorLocations[0].Location.Y > Hallway.DoorLocations[1].Location.Y && mainAxisDist > 1)
+				{
+					// rotation of 270
+					Location = FIntPoint(xPlaceholder, Hallway.DoorLocations[0].Location.Y - TileSize);
+					TileDescriptors.Emplace(TileNameCurve, 5, 0, Location);
+
+					Location = FIntPoint(xPlaceholder + TileSize, Hallway.DoorLocations[1].Location.Y + TileSize);
+					TileDescriptors.Emplace(TileNameCurve, 5, 180, Location);
+
+					for (int i = 0; i < FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize - 2; i++)
+					{
+						Location = FIntPoint(xPlaceholder, Hallway.DoorLocations[0].Location.Y - TileSize - (TileSize * i));
+						TileDescriptors.Emplace(TileName, 4, 0, Location);
+					}
+				}
+				else if (mainAxisDist > 1)
+				{
+					// rotation of 180
+					Location = FIntPoint(xPlaceholder, Hallway.DoorLocations[0].Location.Y);
+					TileDescriptors.Emplace(TileNameCurve, 5, 270, Location);
+
+					Location = FIntPoint(xPlaceholder - TileSize, Hallway.DoorLocations[1].Location.Y);
+					TileDescriptors.Emplace(TileNameCurve, 5, 90, Location);
+
+					for (int i = 0; i < FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize - 3; i++)
+					{
+						Location = FIntPoint(xPlaceholder, Hallway.DoorLocations[0].Location.Y + (TileSize * i));
+						TileDescriptors.Emplace(TileName, 4, 0, Location);
+					}
+				}
+				// place our two corners at the place where the above path stops and the heights of each doorway
+
+				for (int i = 0; i < mainAxisDist / 2 + mainAxisDist % 2; i++)
+				{
+					Location = FIntPoint(xPlaceholder + TileSize * 2, Hallway.DoorLocations[1].Location.Y);
+					TileDescriptors.Emplace(TileName, 4, 90, Location);
+				}
+			}
+		}
+		else
+		{
+			// place tiles to fill up the entire first axis - 1, then a corner, then the next axis
+			mainAxisDist = Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X;
+			secondAxisDist = Hallway.DoorLocations[0].Location.Y - Hallway.DoorLocations[1].Location.Y;
+			int parityMultiplier;
+			if (secondAxisDist < 0)
+				parityMultiplier = 1;
+			else
+				parityMultiplier = -1;
+			secondAxisDist = FMath::Abs(secondAxisDist);
+			for (int i = 0; i < mainAxisDist - TileSize; i++)
+			{
+				Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * i), Hallway.DoorLocations[0].Location.Y);
+				TileDescriptors.Emplace(TileName, 4, 90, Location);
+			}
+			// place a single corner tile
+			for (int i = 0; i < secondAxisDist; i++)
+			{
+				Location = FIntPoint(Hallway.DoorLocations[0].Location.X + mainAxisDist, Hallway.DoorLocations[0].Location.Y + (TileSize * i * parityMultiplier));
+				TileDescriptors.Emplace(TileName, 4, 0, Location);
+			}
+		}
 		break;
 	case 270:
-		// Here I need to place tiles left of the doorway with increasing x values
-		Location = FIntPoint(Hallway.DoorLocations[0].Location.X + TileSize, Hallway.DoorLocations[0].Location.Y);
-		TileDescriptors.Emplace(TileName, 4, 0, Location);
+		if (bDoorsParallel)
+		{
+			mainAxisDist = FMath::Abs(Hallway.DoorLocations[0].Location.Y - Hallway.DoorLocations[1].Location.Y) / TileSize;
+			if (Hallway.DoorLocations[0].Location.X == Hallway.DoorLocations[1].Location.X + TileSize)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("straight shot between roomids: %d, %d"), Hallway.RoomIds[0], Hallway.RoomIds[1]);
+				for (int i = 0; i < mainAxisDist; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, Hallway.DoorLocations[0].Location.Y - (TileSize * i) - TileSize);
+					TileDescriptors.Emplace(TileName, 4, 0, Location);
+				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("parallel offset between roomids: %d, %d"), Hallway.RoomIds[0], Hallway.RoomIds[1]);
+				int yPlaceholder = 0;
+				for (int i = 0; i < mainAxisDist / 2 - 1; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, Hallway.DoorLocations[0].Location.Y - (TileSize * i) - TileSize);
+					TileDescriptors.Emplace(TileName, 4, 0, Location);
+					yPlaceholder = Location.Y;
+				}
+				if (Hallway.DoorLocations[0].Location.X > Hallway.DoorLocations[1].Location.X && mainAxisDist > 1)
+				{
+					// rotation of 270
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize, yPlaceholder);
+					TileDescriptors.Emplace(TileNameCurve, 5, 270, Location);
+
+					Location = FIntPoint(Hallway.DoorLocations[1].Location.X + TileSize, yPlaceholder - TileSize);
+					TileDescriptors.Emplace(TileNameCurve, 5, 90, Location);
+
+					for (int i = 0; i < FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize - 2; i++)
+					{
+						Location = FIntPoint(Hallway.DoorLocations[0].Location.X - TileSize - (TileSize * i), yPlaceholder - TileSize);
+						TileDescriptors.Emplace(TileName, 4, 90, Location);
+					}
+				}
+				else if (mainAxisDist > 1)
+				{
+					// rotation of 180
+					Location = FIntPoint(Hallway.DoorLocations[0].Location.X, yPlaceholder);
+					TileDescriptors.Emplace(TileNameCurve, 5, 180, Location);
+
+					Location = FIntPoint(Hallway.DoorLocations[1].Location.X, yPlaceholder - TileSize);
+					TileDescriptors.Emplace(TileNameCurve, 5, 0, Location);
+
+					for (int i = 0; i < FMath::Abs(Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X) / TileSize - 3; i++)
+					{
+						Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * 2) + (TileSize * i), yPlaceholder - TileSize);
+						TileDescriptors.Emplace(TileName, 4, 90, Location);
+					}
+				}
+				// place our two corners at the place where the above path stops and the heights of each doorway
+
+				for (int i = 0; i < mainAxisDist / 2 + mainAxisDist % 2; i++)
+				{
+					Location = FIntPoint(Hallway.DoorLocations[1].Location.X, yPlaceholder - TileSize * 2 - (TileSize * i));
+					TileDescriptors.Emplace(TileName, 4, 0, Location);
+				}
+			}
+		}
+		else
+		{
+			// place tiles to fill up the entire first axis - 1, then a corner, then the next axis
+			mainAxisDist = Hallway.DoorLocations[0].Location.X - Hallway.DoorLocations[1].Location.X;
+			secondAxisDist = Hallway.DoorLocations[0].Location.Y - Hallway.DoorLocations[1].Location.Y;
+			int parityMultiplier;
+			if (secondAxisDist < 0)
+				parityMultiplier = 1;
+			else
+				parityMultiplier = -1;
+			secondAxisDist = FMath::Abs(secondAxisDist);
+			for (int i = 0; i < mainAxisDist - TileSize; i++)
+			{
+				Location = FIntPoint(Hallway.DoorLocations[0].Location.X + (TileSize * i), Hallway.DoorLocations[0].Location.Y);
+				TileDescriptors.Emplace(TileName, 4, 90, Location);
+			}
+			// place a single corner tile
+			for (int i = 0; i < secondAxisDist; i++)
+			{
+				Location = FIntPoint(Hallway.DoorLocations[0].Location.X + mainAxisDist, Hallway.DoorLocations[0].Location.Y + (TileSize * i * parityMultiplier));
+				TileDescriptors.Emplace(TileName, 4, 0, Location);
+			}
+		}
 		break;
 	}
 }
@@ -1072,12 +1430,32 @@ bool ASoulDrive2GameModeBase::FindDoorConflict(const TArray<FTileDescriptor> &Do
 {
 	for (FTileDescriptor Door : Doorways)
 	{
+
 		if (Location == Door.Location)
 		{
 			return true;
 		}
 	}
 	return false;
+}
+
+bool ASoulDrive2GameModeBase::CheckDoorsParallel(int rotation1, int rotation2)
+{
+	// Going to use the parity of the difference of rotations to determine if we are parallel ( feel free to check the math but it should always work out )
+
+	rotation1 = rotation1 / 90;
+	rotation2 = rotation2 / 90;
+	int difference = rotation1 - rotation2;
+	if (difference % 2 == 0)
+	{
+		// parity is even
+		return true;
+	}
+	else
+	{
+		// parity is odd
+		return false;
+	}
 }
 
 void ASoulDrive2GameModeBase::PostLogin(APlayerController* NewPlayer)

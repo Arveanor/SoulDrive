@@ -232,7 +232,7 @@ class SOULDRIVE2_API ASoulDrive2GameModeBase : public AGameModeBase
 
 public:
 	UPROPERTY(BlueprintReadWrite, Category = "MapGen")
-	int DEBUG_ROOM_LIMIT = 500; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
+	int DEBUG_ROOM_LIMIT = 1112; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
 	UPROPERTY(EditDefaultsOnly, Category="MapGen")
 	uint32 MINIMUM_LEAF_QUAD_SIZE = 5;
  	UPROPERTY(EditDefaultsOnly, Category = "MapGen")
@@ -347,10 +347,11 @@ private:
 	TArray<FRoomDescriptor> MakeRoomsInQuads(FRandomStream RandomStream);
 	TArray<FHallwayDescriptor> MakeHallways(FRandomStream RandomStream, TArray<FRoomDescriptor> &Rooms);
 	FTileDescriptor MakeDoorway(const TArray<FTileDescriptor>& CornerDescriptors, const FRoomDescriptor LocalRoom, const FRoomDescriptor ConnectedRoom);
+	TArray<FTileDescriptor> PlaceWallTiles(const TArray<FTileDescriptor> &RoomCorners, const TArray<FTileDescriptor> &Doorways);
 	void BuildTileLocationsList(TArray<FRoomDescriptor> Rooms, TArray<FHallwayDescriptor> Hallways, TArray<FTileDescriptor> &TileDescriptors);
 	void PlaceHallTiles(TArray<FTileDescriptor> &TileDescriptors, FHallwayDescriptor Hallway);
 	bool FindDoorConflict(const TArray<FTileDescriptor> &Doorways, const FIntPoint Location);
-
+	bool CheckDoorsParallel(int rotation1, int rotation2);
 
 	UDataTable* EdgeMapData;
 
