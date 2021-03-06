@@ -31,22 +31,76 @@ struct FRoomDescriptor {
 	UPROPERTY()
 	TArray<FIntPoint> OrderedRoomCorners;
 
+	UPROPERTY()
+	int RoomId; // unique identifier of this room
+
+	UPROPERTY()
+	FBox Box; // just to be able to store our potential min/max for placement of floors.
+
 	FRoomDescriptor() {}
+
+	FORCEINLINE bool operator==(const FRoomDescriptor& other) const 
+	{
+		return RoomId == other.RoomId;
+	}
+
+	friend FORCEINLINE uint32 GetTypeHash(const FRoomDescriptor& Other)
+	{
+		return GetTypeHash(Other.RoomId);
+	}
 };
 
-/*
-** We may need to track things here like FNames of Room Descriptors, or where exactly the openings are, or we may want to use a struct that only defines the
-** array of points, that gets extended for the full room functionality, lot of this is TBD.
-*/
 USTRUCT(BlueprintType)
-struct FHallwayDescriptor {
+struct FRoomCluster {
 	GENERATED_USTRUCT_BODY()
 
 	public:
 	UPROPERTY()
-	TArray<FIntPoint> OrderedHallCorners;
+	TSet<FRoomDescriptor> Rooms;
 
-	FHallwayDescriptor() {}
+	UPROPERTY()
+	int ClusterId;
+
+	UPROPERTY()
+	FIntPoint Center;
+
+	FRoomCluster() {}
+
+	FORCEINLINE bool operator==(const FRoomCluster& other) const
+	{
+		return ClusterId == other.ClusterId;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FClusterPair {
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
+	FRoomCluster Start;
+
+	UPROPERTY()
+	FRoomCluster End;
+
+	UPROPERTY()
+	uint32 Distance;
+
+	FClusterPair() {}
+
+	FORCEINLINE bool operator==(const FClusterPair& other) const
+	{
+		return Distance == other.Distance;
+	}
+
+	FORCEINLINE bool operator>(const FClusterPair& other) const
+	{
+		return Distance > other.Distance;
+	}
+
+	FORCEINLINE bool operator<(const FClusterPair& other) const
+	{
+		return Distance < other.Distance;
+	}
 };
 
 USTRUCT(BlueprintType)
@@ -153,6 +207,36 @@ struct FTileDescriptor
 	// 	{ }
 };
 
+/*
+** We may need to track things here like FNames of Room Descriptors, or where exactly the openings are, or we may want to use a struct that only defines the
+** array of points, that gets extended for the full room functionality, lot of this is TBD.
+*/
+USTRUCT(BlueprintType)
+struct FHallwayDescriptor {
+	GENERATED_USTRUCT_BODY()
+
+	public:
+	UPROPERTY()
+	TArray<FIntPoint> OrderedHallCorners;
+
+	UPROPERTY()
+	TArray<FTileDescriptor> DoorLocations; // tiles where there are doors into this hallway.
+
+	UPROPERTY()
+	TArray<int> RoomIds; // the two rooms this hallway connects, could expand to include branching halls later
+
+	FHallwayDescriptor() {}
+
+	FORCEINLINE bool operator==(const FHallwayDescriptor& other) const
+	{
+		if (RoomIds.Num() < 2 || other.RoomIds.Num() < 2)
+		{
+			return false;
+		}
+		return RoomIds[0] == other.RoomIds[0] && RoomIds[1] == other.RoomIds[1];
+	}
+};
+
 USTRUCT(BlueprintType)
 struct FTileArray
 {
@@ -219,7 +303,17 @@ class SOULDRIVE2_API ASoulDrive2GameModeBase : public AGameModeBase
 
 
 public:
-	int DEBUG_ROOM_LIMIT = 103; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
+	UPROPERTY(BlueprintReadWrite, Category = "MapGen")
+	int DEBUG_ROOM_LIMIT = 1112; // just for testing purposes, this will limit how many rooms get created, no matter how many leave quads exist.
+	UPROPERTY(EditDefaultsOnly, Category="MapGen")
+	uint32 MINIMUM_LEAF_QUAD_SIZE = 5;
+ 	UPROPERTY(EditDefaultsOnly, Category = "MapGen")
+ 	uint32 MINIMUM_STEM_QUAD_SIZE = 6;
+ 	UPROPERTY(EditDefaultsOnly, Category = "MapGen")
+ 	uint8 MAXIMUM_QUAD_DEPTH = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "MapGen")
+ 	uint32 MINIMUM_ROOM_DIMENSIONS = 3;
+
 	TArray<AActor*> playerStartArray;
 
 	ASoulDrive2GameModeBase();
@@ -280,10 +374,7 @@ public:
 
 	int IndexFromPoint(int x, int y, int maxX, int maxY);
 private:
-	const uint32 MINIMUM_LEAF_QUAD_SIZE = 1;
-	const uint32 MINIMUM_STEM_QUAD_SIZE = 800;
-	const uint8 MAXIMUM_QUAD_DEPTH = 1;
-	const uint32 MINIMUM_ROOM_DIMENSIONS = 2;
+
 	// How many cutouts do we want from our room? each index in this array should map to the number of cutouts to use, so if our weighted random technique gets a '1'
 	// we want to use a single cutout. Note that '0' is expected to be valid, because of course we want some rooms that really are rectangles.
 	const static TArray<uint16> NUMBER_OF_ROOM_CUTOUT_WEIGHTS;
@@ -326,10 +417,37 @@ private:
 	** Assign room dimensions within each quad.
 	*/
 	TArray<FRoomDescriptor> MakeRoomsInQuads(FRandomStream RandomStream);
-	TArray<FHallwayDescriptor> MakeHallways(FRandomStream RandomStream);
+	TArray<FHallwayDescriptor> MakeHallways(FRandomStream RandomStream, TArray<FRoomDescriptor> &Rooms);
+	FTileDescriptor MakeDoorway(const TArray<FTileDescriptor>& CornerDescriptors, const FRoomDescriptor LocalRoom, const FRoomDescriptor ConnectedRoom);
+	TArray<FTileDescriptor> PlaceWallTiles(const TArray<FTileDescriptor> &RoomCorners, const TArray<FTileDescriptor> &Doorways);
 	void BuildTileLocationsList(TArray<FRoomDescriptor> Rooms, TArray<FHallwayDescriptor> Hallways, TArray<FTileDescriptor> &TileDescriptors);
+	void PlaceFloorTiles(TArray<FTileDescriptor> &TileDescriptors, TArray<FTileDescriptor> WallDescriptors);
+
+	void PlaceHallTiles(TArray<FTileDescriptor> &TileDescriptors, FHallwayDescriptor Hallway);
+	bool FindDoorConflict(const TArray<FTileDescriptor> &Doorways, const FIntPoint Location);
+	void CalculateClusterDistances(TArray<FClusterPair>& DistanceArray, TArray <FRoomCluster>& Clusters);
+	void CombineClusters(TArray<FClusterPair>& DistanceArray, TArray <FRoomCluster>& Clusters, TArray<FHallwayDescriptor> &Hallways);
+
+	// After the first pass it is not necessarily true all rooms can be reached by all rooms. Here we fix that with
+	// additional hallways to connect each cluster of rooms.
+	void ConnectRoomClusters(TArray<FHallwayDescriptor> &Hallways, TArray<FRoomDescriptor> &Rooms);
+	void CreateRoomCluster(TArray<FHallwayDescriptor>& Hallways, const FHallwayDescriptor &Hallway, FRoomCluster &Cluster, const TArray<FRoomDescriptor>& Rooms, int debugRecursion = 0);
+	bool IsHallwayInAnyCluster(const FHallwayDescriptor &Hallway, const TArray<FRoomCluster> &Clusters);
+	FIntPoint FindClusterCenter(FRoomCluster& Cluster);
 
 
+	// Helper functions for making tile math less complicated
+	FIntPoint FindTileOriginFromCenter(FIntPoint Center, int rotation);
+	FIntPoint FindTileCenterFromOrigin(const FTileDescriptor Tile);
+
+	// Use A* to calculate only centerpoints of hall tiles from Door to Door
+	void CreateHallwayRoute(const FTileDescriptor& Start, const FTileDescriptor& End, TArray<FIntPoint>& Solution);
+
+	// Helper for A* to tell us each neighbors score
+	int ScoreHallwayStep(FIntPoint Cursor, FIntPoint Target, FIntPoint Candidate);
+
+	// Use centerpoints of hall tiles to determine each tiles type and rotation
+	TArray<FTileDescriptor> CreateHallTilesFromRoute(const TArray<FIntPoint>& Route);
 
 	UDataTable* EdgeMapData;
 
