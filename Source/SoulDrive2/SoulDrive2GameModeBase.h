@@ -38,6 +38,69 @@ struct FRoomDescriptor {
 	FBox Box; // just to be able to store our potential min/max for placement of floors.
 
 	FRoomDescriptor() {}
+
+	FORCEINLINE bool operator==(const FRoomDescriptor& other) const 
+	{
+		return RoomId == other.RoomId;
+	}
+
+	friend FORCEINLINE uint32 GetTypeHash(const FRoomDescriptor& Other)
+	{
+		return GetTypeHash(Other.RoomId);
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FRoomCluster {
+	GENERATED_USTRUCT_BODY()
+
+	public:
+	UPROPERTY()
+	TSet<FRoomDescriptor> Rooms;
+
+	UPROPERTY()
+	int ClusterId;
+
+	UPROPERTY()
+	FIntPoint Center;
+
+	FRoomCluster() {}
+
+	FORCEINLINE bool operator==(const FRoomCluster& other) const
+	{
+		return ClusterId == other.ClusterId;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FClusterPair {
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
+	FRoomCluster Start;
+
+	UPROPERTY()
+	FRoomCluster End;
+
+	UPROPERTY()
+	uint32 Distance;
+
+	FClusterPair() {}
+
+	FORCEINLINE bool operator==(const FClusterPair& other) const
+	{
+		return Distance == other.Distance;
+	}
+
+	FORCEINLINE bool operator>(const FClusterPair& other) const
+	{
+		return Distance > other.Distance;
+	}
+
+	FORCEINLINE bool operator<(const FClusterPair& other) const
+	{
+		return Distance < other.Distance;
+	}
 };
 
 USTRUCT(BlueprintType)
@@ -163,6 +226,15 @@ struct FHallwayDescriptor {
 	TArray<int> RoomIds; // the two rooms this hallway connects, could expand to include branching halls later
 
 	FHallwayDescriptor() {}
+
+	FORCEINLINE bool operator==(const FHallwayDescriptor& other) const
+	{
+		if (RoomIds.Num() < 2 || other.RoomIds.Num() < 2)
+		{
+			return false;
+		}
+		return RoomIds[0] == other.RoomIds[0] && RoomIds[1] == other.RoomIds[1];
+	}
 };
 
 USTRUCT(BlueprintType)
@@ -349,9 +421,33 @@ private:
 	FTileDescriptor MakeDoorway(const TArray<FTileDescriptor>& CornerDescriptors, const FRoomDescriptor LocalRoom, const FRoomDescriptor ConnectedRoom);
 	TArray<FTileDescriptor> PlaceWallTiles(const TArray<FTileDescriptor> &RoomCorners, const TArray<FTileDescriptor> &Doorways);
 	void BuildTileLocationsList(TArray<FRoomDescriptor> Rooms, TArray<FHallwayDescriptor> Hallways, TArray<FTileDescriptor> &TileDescriptors);
+	void PlaceFloorTiles(TArray<FTileDescriptor> &TileDescriptors, TArray<FTileDescriptor> WallDescriptors);
+
 	void PlaceHallTiles(TArray<FTileDescriptor> &TileDescriptors, FHallwayDescriptor Hallway);
 	bool FindDoorConflict(const TArray<FTileDescriptor> &Doorways, const FIntPoint Location);
-	bool CheckDoorsParallel(int rotation1, int rotation2);
+	void CalculateClusterDistances(TArray<FClusterPair>& DistanceArray, TArray <FRoomCluster>& Clusters);
+	void CombineClusters(TArray<FClusterPair>& DistanceArray, TArray <FRoomCluster>& Clusters, TArray<FHallwayDescriptor> &Hallways);
+
+	// After the first pass it is not necessarily true all rooms can be reached by all rooms. Here we fix that with
+	// additional hallways to connect each cluster of rooms.
+	void ConnectRoomClusters(TArray<FHallwayDescriptor> &Hallways, TArray<FRoomDescriptor> &Rooms);
+	void CreateRoomCluster(TArray<FHallwayDescriptor>& Hallways, const FHallwayDescriptor &Hallway, FRoomCluster &Cluster, const TArray<FRoomDescriptor>& Rooms, int debugRecursion = 0);
+	bool IsHallwayInAnyCluster(const FHallwayDescriptor &Hallway, const TArray<FRoomCluster> &Clusters);
+	FIntPoint FindClusterCenter(FRoomCluster& Cluster);
+
+
+	// Helper functions for making tile math less complicated
+	FIntPoint FindTileOriginFromCenter(FIntPoint Center, int rotation);
+	FIntPoint FindTileCenterFromOrigin(const FTileDescriptor Tile);
+
+	// Use A* to calculate only centerpoints of hall tiles from Door to Door
+	void CreateHallwayRoute(const FTileDescriptor& Start, const FTileDescriptor& End, TArray<FIntPoint>& Solution);
+
+	// Helper for A* to tell us each neighbors score
+	int ScoreHallwayStep(FIntPoint Cursor, FIntPoint Target, FIntPoint Candidate);
+
+	// Use centerpoints of hall tiles to determine each tiles type and rotation
+	TArray<FTileDescriptor> CreateHallTilesFromRoute(const TArray<FIntPoint>& Route);
 
 	UDataTable* EdgeMapData;
 
