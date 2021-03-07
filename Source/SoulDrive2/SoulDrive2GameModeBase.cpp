@@ -77,6 +77,7 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 	HallwayDescriptors = MakeHallways(RandomStream, RoomDescriptors);
 	ConnectRoomClusters(HallwayDescriptors, RoomDescriptors);
 	BuildTileLocationsList(RoomDescriptors, HallwayDescriptors, TileDescriptors);
+
 	return 0;
 }
 
@@ -1058,7 +1059,7 @@ void ASoulDrive2GameModeBase::PlaceFloorTiles(TArray<FTileDescriptor> &TileDescr
 					for (int j = 0; j < FloorCount; j++)
 					{
 						FName TileName = FName("Floor_Cave");
-						FIntPoint Location = FIntPoint(Wall.Location.X - TileSize * j - TileSize, Wall.Location.Y);
+						FIntPoint Location = FIntPoint(Wall.Location.X - TileSize * j - TileSize * 2, Wall.Location.Y - TileSize);
 						TileDescriptors.Emplace(TileName, 3, 0, Location);
 					}
 				}
