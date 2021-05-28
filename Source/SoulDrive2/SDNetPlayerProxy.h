@@ -14,19 +14,23 @@ class ASDBaseSpell;
 class ASDNetPlayerControllerProxy;
 
 UCLASS()
-class SOULDRIVE2_API ASDNetPlayerProxy : public APawn
+class SOULDRIVE2_API ASDNetPlayerProxy : public ASDBasePawn
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
-	ASDNetPlayerProxy(const class FObjectInitializer& FOI);
+	ASDNetPlayerProxy();
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 private:
+
+	UFUNCTION(Server, Unreliable, WithValidation)
+	void SetPortalTarget(const FString& InURL, ASDPortal* Portal);
+
 	/** Top down camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* PlayerCameraComponent;
@@ -35,8 +39,8 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* MainCameraBoom;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Player, meta = (AllowPrivateAccess = "true"))
-	class USceneComponent *SceneRoot;
+// 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Player, meta = (AllowPrivateAccess = "true"))
+// 	class USceneComponent *SceneRoot;
 
 	UPROPERTY(replicated)
 	ASDNetPlayerPawn *ServerCharacter;
@@ -61,21 +65,21 @@ private:
 
 	uint8 PlayerId;
 
+	bool isCasting;
+	AActor* InteractionTarget;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-//	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Animation")
+	bool IsMoving = false;
 
-	UFUNCTION(Category = "Inventory")
-	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable, Category = "Levels")
+	void TravelToLevel(FName LevelToLoad);
 
 	UFUNCTION(Category = "Utility")
 	void OnFinalCall();
-
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	bool DropItem(ASDBaseEquipment *DroppedItem);
 
 	UFUNCTION(BlueprintCallable, Category = "PlayerStats")
 	float GetDisplayHealth();
@@ -87,6 +91,17 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	uint8 GetPlayerId();
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void SetIsCasting(bool _isCasting);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void SetInteractionTarget(AActor* Target);
+
+	AActor* GetInteractionTarget();
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	bool IsCasting();
 
 	ASDNetPlayerController *GetServerController();
 

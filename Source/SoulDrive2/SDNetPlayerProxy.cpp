@@ -3,23 +3,25 @@
 #include "SoulDrive2.h"
 #include "SDGameInstance.h"
 #include "SDNetPlayerProxy.h"
+#include "SDNetPlayerControllerProxy.h"
 #include "SDFireBoltSpell.h"
 #include "SDCelestialFragmentSpell.h"
 #include "SDSunBurstSpell.h"
 #include "SDSlash.h"
 #include "SDRangedAttack.h"
+#include "SDPortal.h"
+
 
 // Sets default values
-ASDNetPlayerProxy::ASDNetPlayerProxy(const class FObjectInitializer& FOI)
-	: Super (FOI)
+ASDNetPlayerProxy::ASDNetPlayerProxy()
 {
 	bReplicates = true;
-	SetActorEnableCollision(false);
+	SetActorEnableCollision(true);
 //	GetCapsuleComponent()->SetCollisionProfileName(FName("NoCollision"));
 	PrimaryActorTick.bCanEverTick = true;
 
-	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	RootComponent = SceneRoot;
+// 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+// 	RootComponent = SceneRoot;
 
 	// Create a camera boom...
 	MainCameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -66,6 +68,16 @@ void ASDNetPlayerProxy::BeginPlay()
 	}
 }
 
+bool ASDNetPlayerProxy::SetPortalTarget_Validate(const FString& InURL, ASDPortal* Portal)
+{
+	return true;
+}
+
+void ASDNetPlayerProxy::SetPortalTarget_Implementation(const FString& InURL, ASDPortal* Portal)
+{
+	Portal->ExistingURL = InURL;
+}
+
 void ASDNetPlayerProxy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -76,51 +88,53 @@ void ASDNetPlayerProxy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ASDNetPlayerProxy, SpellSlot1);
 	DOREPLIFETIME(ASDNetPlayerProxy, SpellSlot2);
 	DOREPLIFETIME(ASDNetPlayerProxy, SpellSlot3);
+	DOREPLIFETIME(ASDNetPlayerProxy, IsMoving);
+
 }
 
 // Called every frame
 void ASDNetPlayerProxy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-// 	if (GetNetMode() == ENetMode::NM_ListenServer)
-// 	{
-		if (ServerCharacter != nullptr)
+}
+
+bool ASDNetPlayerProxy::TravelToLevel_Validate(FName LevelToLoad)
+{
+	return true;
+}
+
+
+void ASDNetPlayerProxy::TravelToLevel_Implementation(FName LevelToLoad)
+{
+	ASDPortal* InteractionPortal = dynamic_cast<ASDPortal*>(InteractionTarget);
+
+ 	ASDNetPlayerControllerProxy* ProxyController = dynamic_cast<ASDNetPlayerControllerProxy*>(GetController());
+
+	if (HasAuthority())
+	{
+		if (InteractionPortal != nullptr && !InteractionPortal->ExistingURL.IsEmpty())
 		{
-			FVector ServerClientDistance = this->GetActorLocation() - ServerCharacter->GetActorLocation();
-			if (ServerClientDistance.Size() > 50.0f)
+			if (ProxyController != nullptr)
 			{
-				ServerCharacter->IsMoving = true;
-				this->SetActorLocation(FMath::Lerp(this->GetActorLocation(), ServerCharacter->GetActorLocation(), 0.01));
-				this->SetLerpTarget(ServerCharacter->GetActorLocation());
-			}
-			else
-			{
-				ServerCharacter->IsMoving = false;
+				UE_LOG(LogTemp, Warning, TEXT("Target URL is %s"), *InteractionPortal->ExistingURL);
+//				GetController()->ClientTravel(InteractionPortal->ExistingURL, ETravelType::TRAVEL_Absolute);
+				GetWorld()->ServerTravel(InteractionPortal->ExistingURL, false, false);
 			}
 		}
-/*	}*/
+		if (InteractionPortal != nullptr)
+		{
+			if (GetController()->GetNetConnection() != nullptr)
+				SetPortalTarget(ProxyController->GetNetConnection()->URL.ToString(), InteractionPortal);
+		}
+		ProxyController->ClientTravel(LevelToLoad.ToString(), ETravelType::TRAVEL_Relative, true);
+	}
 }
 
-// Called to bind functionality to input
-// void ASDNetPlayerProxy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-// {
-// 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-// 
-// }
-
-void ASDNetPlayerProxy::OnOverlapBegin(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
-{
-	UE_LOG(LogTemp, Warning, TEXT("proxy pawn overlap event!"));
-}
 
 void ASDNetPlayerProxy::OnFinalCall()
 {
 }
 
-bool ASDNetPlayerProxy::DropItem(ASDBaseEquipment * DroppedItem)
-{
-	return ServerCharacter->DropItem(DroppedItem);
-}
 
 float ASDNetPlayerProxy::GetDisplayHealth()
 {
@@ -154,6 +168,31 @@ void ASDNetPlayerProxy::SetPlayerId(uint8 Id)
 uint8 ASDNetPlayerProxy::GetPlayerId()
 {
 	return PlayerId;
+}
+
+void ASDNetPlayerProxy::SetIsCasting(bool _isCasting)
+{
+	isCasting = _isCasting;
+}
+
+bool ASDNetPlayerProxy::SetInteractionTarget_Validate(AActor* Target)
+{
+	return true;
+}
+
+void ASDNetPlayerProxy::SetInteractionTarget_Implementation(AActor* Target)
+{
+	InteractionTarget = Target;
+}
+
+AActor* ASDNetPlayerProxy::GetInteractionTarget()
+{
+	return InteractionTarget;
+}
+
+bool ASDNetPlayerProxy::IsCasting()
+{
+	return isCasting;
 }
 
 ASDNetPlayerController * ASDNetPlayerProxy::GetServerController()

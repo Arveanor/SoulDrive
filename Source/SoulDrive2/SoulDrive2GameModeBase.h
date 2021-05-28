@@ -19,6 +19,20 @@ enum class ProceduralTileEdges : uint8 {
 };
 
 
+USTRUCT(BlueprintType)
+struct FActorLocation {
+	GENERATED_USTRUCT_BODY()
+	
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<AActor> ActorType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FIntPoint RelativeLocation; // The blueprint may want to use offsets
+
+	FActorLocation() {}
+};
+
 /*
 ** Describe a room to be placed, with an FIntPoint to define each corner, in clockwise order from the Minimum corner. Additionally may be used to contain info
 ** on the rooms visual and gameplay elements.
@@ -366,7 +380,7 @@ public:
 	** returns an int to indicate success or a specific failure code.
 	*/
 	UFUNCTION(BlueprintCallable, Category = "Levels")
-	int GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileDescriptors);
+	int GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileDescriptors, UPARAM(ref) TArray<FActorLocation> &Actors);
 
 	// Called when a level finishes loading to spawn the actual player character and possess it over the dummy loading actor
 	UFUNCTION(BlueprintCallable, Category = "Player")
@@ -422,6 +436,8 @@ private:
 	TArray<FTileDescriptor> PlaceWallTiles(const TArray<FTileDescriptor> &RoomCorners, const TArray<FTileDescriptor> &Doorways);
 	void BuildTileLocationsList(TArray<FRoomDescriptor> Rooms, TArray<FHallwayDescriptor> Hallways, TArray<FTileDescriptor> &TileDescriptors);
 	void PlaceFloorTiles(TArray<FTileDescriptor> &TileDescriptors, TArray<FTileDescriptor> WallDescriptors);
+
+	void BuildActorList(const TArray<FRoomDescriptor> &Rooms, TArray<FActorLocation> &Actors);
 
 	void PlaceHallTiles(TArray<FTileDescriptor> &TileDescriptors, FHallwayDescriptor Hallway);
 	bool FindDoorConflict(const TArray<FTileDescriptor> &Doorways, const FIntPoint Location);

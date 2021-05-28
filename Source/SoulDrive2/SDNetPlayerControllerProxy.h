@@ -158,14 +158,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	uint8 OverwritableAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
-	TSubclassOf<ASDNetPlayerPawn> NetCharacterClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
-	TSubclassOf<ASDNetPlayerController> NetControllerClass;
-
 	virtual void GetSeamlessTravelActorList(bool bToEntry, TArray <class AActor *> &ActorList) override;
-	/*virtual void Possess(APawn* InPawn) override;*/
 
 	void OnClosePlayerMenu();
 	void OnCloseMpMenu();
@@ -192,12 +185,6 @@ private:
 	void SwapWeapons();
 	USDBaseQuest* ConvertQuestStruct(FQuestStruct QuestStruct);
 
-	// Server side character and controller to handle real logic for this proxy
-	UPROPERTY(replicated)
-	ASDNetPlayerController *ServerController;
-	UPROPERTY(replicated)
-	ASDNetPlayerPawn *ServerCharacter;
-	UPROPERTY(replicated)
 	ASDNetPlayerProxy *PlayerProxy;
 
 	FSocket* ListenerSocket;

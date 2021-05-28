@@ -2,6 +2,8 @@
 
 #include "SoulDrive2.h"
 #include "SDPortal.h"
+#include "SDNetPlayerControllerProxy.h"
+#include "SDNetPlayerProxy.h"
 #include "Runtime/Sockets/Public/SocketSubsystem.h"
 #include "Runtime/Sockets/Public/IPAddress.h"
 #include "Runtime/Sockets/Public/Sockets.h"
@@ -27,31 +29,31 @@ bool ASDPortal::ReceiveClick_Implementation(ASDNetPlayerControllerProxy* Control
 
 void ASDPortal::OnBoxBeginOverlap(UPrimitiveComponent * OverlappedComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
-	ASDNetPlayerPawn* OverlapPawn = dynamic_cast<ASDNetPlayerPawn *>(OtherActor);
+	ASDNetPlayerProxy* OverlapPawn = dynamic_cast<ASDNetPlayerProxy *>(OtherActor);
 	if (OverlapPawn != nullptr)
 	{
-		if (OverlapPawn->GetInteractionTarget() == this)
-		{
+		ASDNetPlayerControllerProxy* OverlapController = dynamic_cast<ASDNetPlayerControllerProxy *>(OverlapPawn->GetController());
+		if (OverlapController->GetInteractionTarget() == this) {
 			OverlapPawn->TravelToLevel(TargetLevel);
+		}
 			// Here we'll want to send a message over, but let's just send a quick message to 127.0.0.1 for now
-			FSocket* Socket = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(NAME_Stream, TEXT("default"), false);
-			FIPv4Address ip(127, 0, 0, 1);
-
-			TSharedRef<FInternetAddr> addr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
-			addr->SetIp(ip.Value);
-			addr->SetPort(7776);
-			bool connected = Socket->Connect(*addr);
-
-			FString TestMsg = TEXT("Hello, internet!");
-			TCHAR* serializedChar = TestMsg.GetCharArray().GetData();
-			int32 sent = 0;
-			bool successful = Socket->Send((uint8*)TCHAR_TO_UTF8(serializedChar), FCString::Strlen(serializedChar), sent);
-
+// 			FSocket* Socket = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(NAME_Stream, TEXT("default"), false);
+// 			FIPv4Address ip(127, 0, 0, 1);
+// 
+// 			TSharedRef<FInternetAddr> addr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
+// 			addr->SetIp(ip.Value);
+// 			addr->SetPort(7776);
+// 			bool connected = Socket->Connect(*addr);
+// 
+// 			FString TestMsg = TEXT("Hello, internet!");
+// 			TCHAR* serializedChar = TestMsg.GetCharArray().GetData();
+// 			int32 sent = 0;
+// 			bool successful = Socket->Send((uint8*)TCHAR_TO_UTF8(serializedChar), FCString::Strlen(serializedChar), sent);
+// 
 // 			TCHAR recvBuffer = 0;
 // 			int32 received = 0;
 // 			Socket->Recv((uint8*)&recvBuffer, 255, received);
 // 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Response from server -> %s"), recvBuffer));
-		}
 	}
 }
 

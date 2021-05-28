@@ -62,7 +62,7 @@ void ASoulDrive2GameModeBase::SetLevelActive(bool IsActive)
 	IsLevelActive = IsActive;
 }
 
-int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileDescriptors)
+int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileDescriptors, UPARAM(ref) TArray<FActorLocation> &Actors)
 {
 	ensureMsgf(TileSize % 2 == 0, TEXT("TileSize was set to %d. Ensure TileSize is divisible by two before continuing"), TileSize);
 	FRandomStream RandomStream;
@@ -77,6 +77,7 @@ int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor>
 	HallwayDescriptors = MakeHallways(RandomStream, RoomDescriptors);
 	ConnectRoomClusters(HallwayDescriptors, RoomDescriptors);
 	BuildTileLocationsList(RoomDescriptors, HallwayDescriptors, TileDescriptors);
+	BuildActorList(RoomDescriptors, Actors);
 
 	return 0;
 }
@@ -1066,6 +1067,15 @@ void ASoulDrive2GameModeBase::PlaceFloorTiles(TArray<FTileDescriptor> &TileDescr
 			}
 		}
 	}
+}
+
+void ASoulDrive2GameModeBase::BuildActorList(const TArray<FRoomDescriptor> &Rooms, TArray<FActorLocation> &Actors)
+{
+	FActorLocation SpawnPoint = FActorLocation();
+	SpawnPoint.RelativeLocation.X = Rooms[0].OrderedRoomCorners[0].X + TileSize;
+	SpawnPoint.RelativeLocation.Y = Rooms[0].OrderedRoomCorners[0].Y + TileSize;
+	SpawnPoint.ActorType = APlayerStart::StaticClass();
+	Actors.Add(SpawnPoint);
 }
 
 void ASoulDrive2GameModeBase::PlaceHallTiles(TArray<FTileDescriptor> &TileDescriptors, FHallwayDescriptor Hallway)
