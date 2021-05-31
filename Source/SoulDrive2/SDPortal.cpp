@@ -3,7 +3,9 @@
 #include "SoulDrive2.h"
 #include "SDPortal.h"
 #include "SDNetPlayerControllerProxy.h"
+#include "Kismet/GameplayStatics.h"
 #include "SDNetPlayerProxy.h"
+#include "SoulDrive2GameModeBase.h"
 #include "Runtime/Sockets/Public/SocketSubsystem.h"
 #include "Runtime/Sockets/Public/IPAddress.h"
 #include "Runtime/Sockets/Public/Sockets.h"
@@ -32,10 +34,17 @@ void ASDPortal::OnBoxBeginOverlap(UPrimitiveComponent * OverlappedComp, AActor *
 	ASDNetPlayerProxy* OverlapPawn = dynamic_cast<ASDNetPlayerProxy *>(OtherActor);
 	if (OverlapPawn != nullptr)
 	{
+		FLatentActionInfo LatentInfo;
+		UGameplayStatics::LoadStreamLevel(this, TargetLevel, true, true, LatentInfo);
 		ASDNetPlayerControllerProxy* OverlapController = dynamic_cast<ASDNetPlayerControllerProxy *>(OverlapPawn->GetController());
-		if (OverlapController->GetInteractionTarget() == this) {
-			OverlapPawn->TravelToLevel(TargetLevel);
+		ASoulDrive2GameModeBase* GameMode = dynamic_cast<ASoulDrive2GameModeBase *>(GetWorld()->GetAuthGameMode());
+		if (GameMode != nullptr)
+		{
+			GameMode->AddControllerToTravelMap(OverlapController, TargetLevel);
 		}
+		//if (OverlapController->GetInteractionTarget() == this) {
+		//	OverlapPawn->TravelToLevel(TargetLevel);
+		//}
 			// Here we'll want to send a message over, but let's just send a quick message to 127.0.0.1 for now
 // 			FSocket* Socket = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(NAME_Stream, TEXT("default"), false);
 // 			FIPv4Address ip(127, 0, 0, 1);

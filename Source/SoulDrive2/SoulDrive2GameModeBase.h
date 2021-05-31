@@ -221,6 +221,8 @@ struct FTileDescriptor
 	// 	{ }
 };
 
+class ASDNetPlayerControllerProxy;
+
 /*
 ** We may need to track things here like FNames of Room Descriptors, or where exactly the openings are, or we may want to use a struct that only defines the
 ** array of points, that gets extended for the full room functionality, lot of this is TBD.
@@ -362,6 +364,9 @@ public:
 		return *JustEnum;
 	}
 
+	UFUNCTION(BlueprintCallable, Category = "Levels")
+	void MovePlayerToSublevel(FVector Location, FName LevelName);
+
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevel(const TArray<FName> &SubLevels, int MapTileCountX, int MapTileCountY);
 
@@ -373,6 +378,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Levels")
 	void GenerateLevelActors(const TArray< TSubclassOf<AActor> > &LevelList, int MapTileCountX, int MapTileCountY);
+
+	UFUNCTION(Category = "Levels")
+	void AddControllerToTravelMap(ASDNetPlayerControllerProxy* Controller, FName MapName);
 
 	/*
 	** Driver function to get locational data for map layouts. Room and Hallway Descriptors will be used to return data that the caller can use to actually spawn
@@ -473,6 +481,8 @@ private:
 
 	UPROPERTY()
 	bool IsLevelActive;
+
+	TMap<FName, TArray<ASDNetPlayerControllerProxy*>> ControllersWaitingTravel;
 
 protected:
 	void PostLogin(APlayerController* NewPlayer) override;

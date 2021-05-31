@@ -52,6 +52,18 @@ ASoulDrive2GameModeBase::ASoulDrive2GameModeBase()
 	IsLevelActive = false;
 }
 
+void ASoulDrive2GameModeBase::MovePlayerToSublevel(FVector Location, FName LevelName)
+{
+	TArray<ASDNetPlayerControllerProxy *> *Controllers = ControllersWaitingTravel.Find(LevelName);
+	if (Controllers != nullptr)
+	{
+		for (int i = Controllers->Num() - 1; i >= 0; i--)
+		{
+			Controllers->Pop()->GetPawn()->SetActorLocation(Location);
+		}
+	}
+}
+
 bool ASoulDrive2GameModeBase::GetIsLevelActive()
 {
 	return IsLevelActive;
@@ -60,6 +72,13 @@ bool ASoulDrive2GameModeBase::GetIsLevelActive()
 void ASoulDrive2GameModeBase::SetLevelActive(bool IsActive)
 {
 	IsLevelActive = IsActive;
+}
+
+void ASoulDrive2GameModeBase::AddControllerToTravelMap(ASDNetPlayerControllerProxy* Controller, FName MapName)
+{
+	TArray<ASDNetPlayerControllerProxy *> Controllers = ControllersWaitingTravel.FindOrAdd(MapName);
+	Controllers.AddUnique(Controller);
+	ControllersWaitingTravel.Add(MapName, Controllers);
 }
 
 int ASoulDrive2GameModeBase::GenerateMapData(UPARAM(ref) TArray<FTileDescriptor> &TileDescriptors, UPARAM(ref) TArray<FActorLocation> &Actors)
